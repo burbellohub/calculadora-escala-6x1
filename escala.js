@@ -14,6 +14,8 @@
   var LIMITE_DIA = 10 * 60;
   var DSR_EXIGIDOS = 2;
   var DOMINGO = 6;
+  // Folga em domingo: mulheres, ao menos 1 a cada 15 dias (2 semanas); homens, ao menos 1 por mês (4 semanas).
+  var DOMINGO_LIMITE = { m: 2, h: 4 };
 
   /** "08:00", "8:00", "8h30", "0800" -> minutos desde 00:00. Vazio -> null. Inválido -> NaN. */
   function lerHora(txt) {
@@ -33,10 +35,13 @@
 
   /**
    * dias: 7 itens (segunda a domingo) { dsr: boolean, batidas: [4 textos "HH:MM"] }
+   * extra: { sexo: "m" (mulher) | "h" (homem), domingoACada: a cada quantas semanas folga num domingo
+   *         (só vale se o domingo for dia de trabalho; 0 = nunca folga) }
    * Devolve { erros:[{dia, msg}], totalMin, porDia:[minutos|null], dsr, excedeMin, situacao, domingoTrabalha }
    * situacao: "erro" (dados incompletos ou fora da regra), "excede" (passa de 42 h) ou "ok".
    */
-  function avaliar(dias) {
+  function avaliar(dias, extra) {
+    extra = extra || {};
     var erros = [];
     var total = 0;
     var porDia = [];
@@ -66,10 +71,23 @@
     if (dsr < DSR_EXIGIDOS) erros.push({ dia: null, msg: "Escolha 2 dias de DSR (descanso semanal remunerado). Você marcou " + dsr + "." });
     else if (dsr > DSR_EXIGIDOS) erros.push({ dia: null, msg: "São exigidos exatamente 2 dias de DSR. Você marcou " + dsr + "; deixe só 2." });
 
+    // Regra do domingo, por sexo.
+    var sexo = extra.sexo === "m" || extra.sexo === "h" ? extra.sexo : "";
+    if (!sexo) erros.push({ dia: null, campo: "sexo", msg: "Informe se a escala é de mulher ou de homem (a regra de folga no domingo é diferente)." });
+    if (!dias[DOMINGO].dsr) {
+      var cada = extra.domingoACada === "" || extra.domingoACada == null ? null : Number(extra.domingoACada);
+      if (cada === null || isNaN(cada)) erros.push({ dia: null, campo: "domingo", msg: "O domingo é dia de trabalho: informe de quantas em quantas semanas a pessoa folga num domingo." });
+      else if (sexo && (cada === 0 || cada > DOMINGO_LIMITE[sexo])) {
+        erros.push({ dia: null, campo: "domingo", msg: sexo === "m"
+          ? "Mulheres precisam folgar pelo menos 1 domingo a cada 15 dias (a cada 2 semanas). " + (cada === 0 ? "Você informou que nunca folga no domingo." : "Você informou a cada " + cada + " semanas.") + " Ajuste a escala."
+          : "Homens precisam folgar pelo menos 1 domingo por mês (a cada 4 semanas). " + (cada === 0 ? "Você informou que nunca folga no domingo." : "Você informou a cada " + cada + " semanas.") + " Ajuste a escala." });
+      }
+    }
+
     var excede = Math.max(0, total - LIMITE_SEMANA);
     var situacao = erros.length ? "erro" : excede ? "excede" : "ok";
     return { erros: erros, totalMin: total, porDia: porDia, dsr: dsr, excedeMin: excede, situacao: situacao, domingoTrabalha: !dias[DOMINGO].dsr };
   }
 
-  return { NOMES: NOMES, BATIDAS: BATIDAS, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, lerHora: lerHora, formatar: formatar, avaliar: avaliar };
+  return { NOMES: NOMES, BATIDAS: BATIDAS, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, DOMINGO_LIMITE: DOMINGO_LIMITE, lerHora: lerHora, formatar: formatar, avaliar: avaliar };
 });

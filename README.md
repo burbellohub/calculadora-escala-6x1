@@ -8,7 +8,7 @@ Página única em **HTML, CSS e JavaScript puros** (sem instalar nada, sem servi
    - exatamente **2 dias de DSR** (mais ou menos que isso é erro);
    - cada dia trabalhado com as 4 batidas preenchidas, em ordem, e até 10 h no dia (horas do dia = (2ª − 1ª) + (4ª − 3ª));
    - total de até **42 h** por semana. Se passar, mostra um aviso com quantas horas faltam reduzir e deixa **editar qualquer dia** da semana;
-   - se o domingo não for DSR, lembra que um dos DSR deve ser, preferencialmente, no domingo.
+   - **folga no domingo, por sexo** (escolher Mulher ou Homem): mulheres, pelo menos 1 domingo de folga a cada 15 dias (a cada 2 semanas); homens, pelo menos 1 por mês (a cada 4 semanas). Com DSR no domingo a regra já está cumprida; se o domingo for dia de trabalho, a pessoa informa de quantas em quantas semanas folga num domingo e o sistema bloqueia se passar do limite.
 3. Só com a escala dentro das regras o botão **Continuar** libera a tela final, com a escala conferida e o botão de **imprimir ou salvar em PDF**.
 
 Os dados **não saem do navegador**.

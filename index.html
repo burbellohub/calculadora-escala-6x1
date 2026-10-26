@@ -25,6 +25,19 @@
 
     <form id="form" novalidate autocomplete="off">
       <fieldset>
+        <legend>Quem trabalha nesta escala</legend>
+        <div class="campo-linha">
+          <label for="sexo">Funcionário(a)</label>
+          <select id="sexo">
+            <option value="">Escolha...</option>
+            <option value="m">Mulher</option>
+            <option value="h">Homem</option>
+          </select>
+        </div>
+        <p class="dica">A folga no domingo muda conforme o sexo: <strong>mulheres</strong>, pelo menos 1 domingo a cada 15 dias; <strong>homens</strong>, pelo menos 1 domingo por mês.</p>
+      </fieldset>
+
+      <fieldset>
         <legend>Escala que a empresa usa hoje</legend>
         <div class="atalhos">
           <button type="button" class="btn" id="exemplo">Preencher exemplo</button>
@@ -33,6 +46,19 @@
         </div>
         <p class="dica" id="nome-exemplo" aria-live="polite"></p>
         <div id="dias" class="dias"></div>
+        <div id="bloco-domingo" class="bloco-domingo" hidden>
+          <label for="domingo-cada">Como o domingo é dia de trabalho: a pessoa folga um domingo a cada</label>
+          <select id="domingo-cada">
+            <option value="">Escolha...</option>
+            <option value="2">2 semanas</option>
+            <option value="3">3 semanas</option>
+            <option value="4">4 semanas</option>
+            <option value="5">5 semanas</option>
+            <option value="6">6 semanas</option>
+            <option value="8">8 semanas</option>
+            <option value="0">Nunca folga no domingo</option>
+          </select>
+        </div>
         <p class="dica">As horas do dia são calculadas pelas batidas: (2ª − 1ª) + (4ª − 3ª). Marcando DSR, o dia não conta horas.</p>
       </fieldset>
 

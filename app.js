@@ -12,11 +12,12 @@
   var D6 = ["08:00", "12:00", "13:00", "15:00"]; // 6 h
   var D6S = ["08:00", "12:00", "12:15", "14:15"]; // 6 h, intervalo curto
   var EXEMPLOS = [
-    { nome: "segunda a sexta, 8 h 24 por dia (42 h)", dias: [D824, D824, D824, D824, D824, null, null] },
-    { nome: "segunda a sexta, 8 h por dia (40 h)", dias: [D8, D8, D8, D8, D8, null, null] },
-    { nome: "9 h de segunda a quinta e 6 h na sexta (42 h)", dias: [D9, D9, D9, D9, D6, null, null] },
-    { nome: "terça a sábado, com DSR na segunda e no domingo (42 h)", dias: [null, D9, D9, D9, D9, D6S, null] },
-    { nome: "quarta e domingo de DSR, 8 h 24 nos outros dias (42 h)", dias: [D824, D824, null, D824, D824, D824, null] },
+    { nome: "homem, segunda a sexta, 8 h 24 por dia (42 h)", sexo: "h", dias: [D824, D824, D824, D824, D824, null, null] },
+    { nome: "mulher, segunda a sexta, 8 h por dia (40 h)", sexo: "m", dias: [D8, D8, D8, D8, D8, null, null] },
+    { nome: "homem, 9 h de segunda a quinta e 6 h na sexta (42 h)", sexo: "h", dias: [D9, D9, D9, D9, D6, null, null] },
+    { nome: "mulher, terça a sábado, com DSR na segunda e no domingo (42 h)", sexo: "m", dias: [null, D9, D9, D9, D9, D6S, null] },
+    { nome: "mulher que trabalha no domingo e folga 1 domingo a cada 2 semanas (42 h)", sexo: "m", domingo: "2", dias: [D824, null, D824, D824, null, D824, D824] },
+    { nome: "homem que trabalha no domingo e folga 1 domingo a cada 4 semanas (42 h)", sexo: "h", domingo: "4", dias: [D824, D824, null, D824, null, D824, D824] },
   ];
   var exemploAtual = 0;
 
@@ -37,6 +38,10 @@
 
   var tocou = false; // só mostra erros depois que a pessoa mexe no formulário
 
+  function lerExtra() {
+    return { sexo: $("#sexo").value, domingoACada: $("#domingo-cada").value };
+  }
+
   function ler() {
     return E.NOMES.map(function (_, i) {
       return { dsr: $("#t" + i).value === "d", batidas: batidasDe(i) };
@@ -45,7 +50,8 @@
 
   function mostrar() {
     var dias = ler();
-    var r = E.avaliar(dias);
+    $("#bloco-domingo").hidden = dias[6].dsr;
+    var r = E.avaliar(dias, lerExtra());
 
     dias.forEach(function (d, i) {
       var linha = document.querySelector('.dia[data-i="' + i + '"]');
@@ -67,11 +73,19 @@
       html += '<div class="msg aviso"><h2>A escala passa do limite semanal</h2><p>Faltam reduzir <strong>' + esc(E.formatar(r.excedeMin)) + "</strong> para caber em " + esc(E.formatar(E.LIMITE_SEMANA)) + ". Diminua a escala: edite as batidas de um ou mais dias acima.</p></div>";
     } else {
       html += '<div class="msg ok"><h2>Dentro do limite</h2><p>A escala cabe em ' + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana e tem 2 dias de DSR. Você pode continuar.</p></div>";
-      if (r.domingoTrabalha) html += '<div class="msg aviso"><p>Atenção: um dos dias de DSR deve ser, preferencialmente, o domingo.</p></div>';
+      html += '<div class="msg ok"><p>' + esc(textoDomingo(lerExtra(), r.domingoTrabalha)) + "</p></div>";
     }
     $("#painel").innerHTML = html;
     $("#continuar").disabled = r.situacao !== "ok";
     return r;
+  }
+
+  /** Frase sobre a regra do domingo, para o painel e para a tela final. */
+  function textoDomingo(extra, trabalha) {
+    var quem = extra.sexo === "m" ? "mulher" : "homem";
+    var regra = extra.sexo === "m" ? "pelo menos 1 domingo de folga a cada 15 dias" : "pelo menos 1 domingo de folga por mês";
+    if (!trabalha) return "Domingo é dia de DSR: a regra do domingo (" + quem + ": " + regra + ") está cumprida.";
+    return "Domingo é dia de trabalho, com folga num domingo a cada " + extra.domingoACada + " semanas: cumpre a regra (" + quem + ": " + regra + ").";
   }
 
   function esconderFinal() { $("#final").hidden = true; $("#final").innerHTML = ""; }
@@ -117,7 +131,7 @@
         : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + '</td><td class="n">' + esc(E.formatar(r.porDia[i])) + "</td></tr>";
     }).join("");
     var el = $("#final");
-    el.innerHTML = "<h2>Escala conferida</h2><p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR.</p>" +
+    el.innerHTML = "<h2>Escala conferida</h2><p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR. " + esc(textoDomingo(lerExtra(), r.domingoTrabalha)) + "</p>" +
       '<table><thead><tr><th>Dia</th><th>Batidas</th><th class="n">Horas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td colspan="2">Total da semana</td><td class="n">' + esc(E.formatar(r.totalMin)) + "</td></tr></tfoot></table>" +
       '<div class="acoes"><button type="button" class="btn primario" id="imprimir">Imprimir ou salvar em PDF</button></div>';
     el.hidden = false;
@@ -144,6 +158,8 @@
     tocou = true;
     var ex = EXEMPLOS[exemploAtual];
     $("#nome-exemplo").textContent = "Exemplo " + (exemploAtual + 1) + " de " + EXEMPLOS.length + ": " + ex.nome + ".";
+    $("#sexo").value = ex.sexo;
+    $("#domingo-cada").value = ex.domingo || "";
     ex.dias.forEach(function (b, i) {
       $("#t" + i).value = b === null ? "d" : "t";
       [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = b === null ? "" : b[k]; });
@@ -161,6 +177,8 @@
   $("#limpar").addEventListener("click", function () {
     tocou = false;
     $("#nome-exemplo").textContent = "";
+    $("#sexo").value = "";
+    $("#domingo-cada").value = "";
     E.NOMES.forEach(function (_, i) { $("#t" + i).value = "t"; [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = ""; }); });
     esconderFinal();
     mostrar();
