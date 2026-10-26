@@ -74,6 +74,9 @@ legend { font-weight: 800; padding: 0 8px; }
 .dia input[type="time"] { min-width: 0; }
 .dia .horas-dia { margin: 0; font-weight: 700; color: var(--azul); font-size: 0.92rem; }
 .dia .horas-dia:empty { display: none; }
+.dia .rodape-dia { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.dia .rodape-dia .horas-dia { margin: 0; }
+.btn.mini { min-height: 38px; padding: 0 12px; font-size: 0.85rem; font-weight: 600; color: var(--azul); }
 .dia label { display: block; font-size: 0.8rem; color: var(--suave); margin-bottom: 2px; }
 select, input[type="text"], input[type="time"] { width: 100%; min-height: 46px; padding: 0 12px; font: inherit; color: var(--texto); background: var(--cartao); border: 1.5px solid var(--linha); border-radius: 10px; }
 input:disabled { opacity: 0.5; }

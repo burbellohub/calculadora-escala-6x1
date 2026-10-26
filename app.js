@@ -18,7 +18,8 @@
       '<div class="cab"><span class="nome">' + nome + '</span>' +
       '<select id="t' + i + '" aria-label="Situação de ' + nome + '"><option value="t">Trabalha</option><option value="d">DSR (descanso)</option></select></div>' +
       '<div class="batidas">' + batidas + "</div>" +
-      '<p class="horas-dia" id="r' + i + '"></p></div>';
+      '<div class="rodape-dia"><p class="horas-dia" id="r' + i + '"></p>' +
+      '<button type="button" class="btn mini" data-copiar="' + i + '" id="c' + i + '">Replicar para os outros dias</button></div></div>';
   }).join("");
 
   function batidasDe(i) { return [0, 1, 2, 3].map(function (k) { return $("#b" + i + k).value; }); }
@@ -39,6 +40,7 @@
       var linha = document.querySelector('.dia[data-i="' + i + '"]');
       [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).disabled = d.dsr; });
       linha.querySelector(".batidas").hidden = d.dsr;
+      $("#c" + i).hidden = d.dsr;
       $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : "Horas do dia: " + E.formatar(r.porDia[i]);
       linha.classList.toggle("dsr", d.dsr);
       linha.classList.toggle("problema", tocou && r.erros.some(function (e) { return e.dia === i; }));
@@ -84,6 +86,20 @@
     el.scrollIntoView({ behavior: "smooth", block: "start" });
     el.focus({ preventScroll: true });
     $("#imprimir").addEventListener("click", function () { window.print(); });
+  });
+
+  $("#dias").addEventListener("click", function (ev) {
+    var bt = ev.target.closest("[data-copiar]");
+    if (!bt) return;
+    var origem = Number(bt.getAttribute("data-copiar"));
+    var valores = batidasDe(origem);
+    E.NOMES.forEach(function (_, i) {
+      if (i === origem || $("#t" + i).value === "d") return; // não mexe nos dias de DSR
+      valores.forEach(function (v, k) { $("#b" + i + k).value = v; });
+    });
+    tocou = true;
+    esconderFinal();
+    mostrar();
   });
 
   $("#exemplo").addEventListener("click", function () {
