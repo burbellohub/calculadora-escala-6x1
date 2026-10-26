@@ -15,7 +15,7 @@ Os dados **não saem do navegador**.
 
 ## Arquivos
 - `escala.js`: as regras (sem tela), testadas em `tests/escala.test.js`. Limites no topo do arquivo: 42 h por semana, 10 h por dia, 2 DSR.
-- `app.js`, `index.html`, `style.css`: a tela.
+- `app.js`, `index.html`, `style.css`: a tela. `logo.png`: logo do escritório, usada no cabeçalho do PDF.
 
 ## Rodar e testar
 Abra o `index.html` no navegador (duplo clique), ou:

@@ -109,6 +109,17 @@
     return "Domingo é dia de trabalho, com folga num domingo a cada " + extra.domingoACada + " semanas: cumpre a regra (" + quem + ": " + regra + ").";
   }
 
+  function dataHoje() {
+    return new Date().toLocaleDateString("pt-BR");
+  }
+
+  /** Trecho da lei sobre o repouso dominical da mulher (mostrado na tela final e no PDF). */
+  function textoLei() {
+    return '<blockquote class="lei"><p class="lei-titulo">Base legal: folga aos domingos para mulheres</p>' +
+      "<p>&ldquo;Havendo trabalho aos domingos, ser&aacute; organizada uma escala de revezamento quinzenal, que favore&ccedil;a o repouso dominical.&rdquo;</p>" +
+      '<p class="lei-fonte">CLT (Decreto-Lei n&ordm; 5.452/1943), art. 386, no Cap&iacute;tulo &ldquo;Da Prote&ccedil;&atilde;o do Trabalho da Mulher&rdquo;. Confira a reda&ccedil;&atilde;o vigente em planalto.gov.br/ccivil_03/decreto-lei/del5452.htm.</p></blockquote>';
+  }
+
   function esconderFinal() { $("#final").hidden = true; $("#final").innerHTML = ""; }
 
   /** Aceita só dígitos que formam um horário real (00:00 a 23:59): descarta o que não existe, como 80:00 ou 12:79. */
@@ -146,15 +157,18 @@
     var dias = ler();
     var r = mostrar();
     if (r.situacao !== "ok") return;
+    var extra = lerExtra();
     var linhas = dias.map(function (d, i) {
       return d.dsr
         ? '<tr class="dsr"><td>' + E.NOMES[i] + '</td><td>DSR</td><td class="n">—</td></tr>'
         : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + '</td><td class="n">' + esc(E.formatar(r.porDia[i])) + "</td></tr>";
     }).join("");
     var el = $("#final");
-    el.innerHTML = "<h2>Escala conferida</h2><p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR. " + esc(textoDomingo(lerExtra(), r.domingoTrabalha)) + "</p>" +
+    var lei = extra.sexo === "m" ? textoLei() : "";
+    el.innerHTML = '<div class="cabeca-final"><img class="logo-final" src="logo.png" alt="Burbello Escritório Contábil" width="150" height="99"><div><h2>Escala conferida</h2><p class="sub-final">Burbello Escritório Contábil · Departamento de RH · ' + esc(dataHoje()) + "</p></div></div>" +
+      "<p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR. " + esc(textoDomingo(extra, r.domingoTrabalha)) + "</p>" +
       '<table><thead><tr><th>Dia</th><th>Batidas</th><th class="n">Horas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td colspan="2">Total da semana</td><td class="n">' + esc(E.formatar(r.totalMin)) + "</td></tr></tfoot></table>" +
-      '<div class="acoes"><button type="button" class="btn primario" id="imprimir">Imprimir ou salvar em PDF</button></div>';
+      lei + '<div class="acoes"><button type="button" class="btn primario" id="imprimir">Imprimir ou salvar em PDF</button></div>';
     el.hidden = false;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
     el.focus({ preventScroll: true });
