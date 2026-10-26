@@ -2,8 +2,8 @@
   "name": "simulador-escala-6x1",
   "version": "1.0.0",
   "private": true,
-  "description": "Simulador do impacto do fim da escala 6x1 (HTML, CSS e JavaScript puros).",
+  "description": "Conferência da escala semanal (42 h e 2 DSR) (HTML, CSS e JavaScript puros).",
   "scripts": {
-    "test": "node --test tests/calc.test.js tests/validacao.test.js"
+    "test": "node --test tests/escala.test.js"
   }
 }
