@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conferência da escala semanal | Burbello</title>
+  <meta name="description" content="Informe a escala da sua empresa, dia a dia, e veja se o total semanal cabe em 42 horas com 2 dias de DSR. Os dados ficam só no seu navegador.">
+  <meta name="theme-color" content="#0f4fc4">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f4fc4'/%3E%3Cpath d='M16 20h32M16 32h32M16 44h20' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="miolo topo-in">
+      <span class="marca">Burbello</span>
+      <span class="setor">Departamento de RH</span>
+    </div>
+  </header>
+
+  <main class="miolo">
+    <section class="intro">
+      <h1>Sua escala cabe em 42 horas?</h1>
+      <p class="lead">Para cada dia da semana, diga se é de trabalho (preenchendo as <strong>4 batidas</strong>: entrada, saída e volta do intervalo, e saída) ou de <strong>DSR</strong>, o descanso semanal remunerado. São exigidos <strong>2 dias de DSR</strong> e, no máximo, <strong>42 horas</strong> na semana. Nada é enviado: os dados ficam só no seu navegador.</p>
+    </section>
+
+    <form id="form" novalidate autocomplete="off">
+      <fieldset>
+        <legend>Quem trabalha nesta escala</legend>
+        <div class="campo-linha">
+          <label for="sexo">Funcionário(a)</label>
+          <select id="sexo">
+            <option value="">Escolha...</option>
+            <option value="m">Mulher</option>
+            <option value="h">Homem</option>
+          </select>
+        </div>
+        <p class="dica">A folga no domingo muda conforme o sexo: <strong>mulheres</strong>, folga 1 domingo sim e 1 não (uma semana sim, outra não, no mínimo 1 a cada 15 dias); <strong>homens</strong>, pelo menos 1 domingo por mês.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Escala que a empresa usa hoje</legend>
+        <div class="atalhos">
+          <button type="button" class="btn" id="exemplo">Preencher exemplo</button>
+          <button type="button" class="btn" id="trocar">Trocar exemplo</button>
+          <button type="button" class="btn" id="limpar">Limpar</button>
+        </div>
+        <p class="dica" id="nome-exemplo" aria-live="polite"></p>
+        <div id="dias" class="dias"></div>
+        <div id="bloco-domingo" class="bloco-domingo" hidden>
+          <label for="domingo-cada" id="rotulo-domingo">Como o domingo é dia de trabalho: a pessoa folga um domingo a cada</label>
+          <select id="domingo-cada">
+            <option value="">Escolha...</option>
+            <option value="2">2 semanas</option>
+            <option value="3">3 semanas</option>
+            <option value="4">4 semanas</option>
+            <option value="5">5 semanas</option>
+            <option value="6">6 semanas</option>
+            <option value="8">8 semanas</option>
+            <option value="0">Nunca folga no domingo</option>
+          </select>
+        </div>
+        <p class="dica">As horas do dia são calculadas pelas batidas: (2ª − 1ª) + (4ª − 3ª). Marcando DSR, o dia não conta horas.</p>
+      </fieldset>
+
+      <section id="painel" class="painel" role="status" aria-live="polite"></section>
+
+      <div class="acoes">
+        <button type="button" class="btn primario" id="continuar" disabled>Continuar</button>
+      </div>
+    </form>
+
+    <section id="final" class="final" tabindex="-1" hidden></section>
+  </main>
+
+  <footer class="miolo rodape">
+    <p>Conferência de apoio ao planejamento; não substitui a análise do RH, da contabilidade ou de advogado trabalhista. Confira sempre o texto oficial da Emenda e a convenção coletiva da categoria.</p>
+  </footer>
+
+  <script src="escala.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
