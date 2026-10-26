@@ -9,20 +9,19 @@
   "use strict";
 
   var NOMES = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
+  var BATIDAS = ["1ª batida (entrada)", "2ª batida (saída p/ intervalo)", "3ª batida (volta do intervalo)", "4ª batida (saída)"];
   var LIMITE_SEMANA = 42 * 60;
   var LIMITE_DIA = 10 * 60;
   var DSR_EXIGIDOS = 2;
   var DOMINGO = 6;
 
-  /** "8", "8,5", "8.5", "8:30", "8h30" -> minutos. Vazio -> null. Inválido -> NaN. */
-  function lerHoras(txt) {
+  /** "08:00", "8:00", "8h30", "0800" -> minutos desde 00:00. Vazio -> null. Inválido -> NaN. */
+  function lerHora(txt) {
     var t = String(txt == null ? "" : txt).trim().toLowerCase().replace(/\s/g, "");
     if (!t) return null;
-    var m = /^(\d{1,2})(?::|h)(\d{1,2})$/.exec(t);
-    if (m) return +m[2] < 60 ? +m[1] * 60 + +m[2] : NaN;
-    if (/^\d{1,2}h$/.test(t)) return parseInt(t, 10) * 60;
-    if (!/^\d{1,2}([.,]\d{1,2})?$/.test(t)) return NaN;
-    return Math.round(parseFloat(t.replace(",", ".")) * 60);
+    var m = /^(\d{1,2})(?::|h)(\d{2})$/.exec(t) || /^(\d{2})(\d{2})$/.exec(t);
+    if (!m) return NaN;
+    return +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : NaN;
   }
 
   /** 2520 -> "42 h"; 2490 -> "41 h 30 min". */
@@ -33,23 +32,35 @@
   }
 
   /**
-   * dias: 7 itens (segunda a domingo) { dsr: boolean, horas: texto digitado }
-   * Devolve { erros:[{dia, msg}], totalMin, dsr, excedeMin, situacao }
+   * dias: 7 itens (segunda a domingo) { dsr: boolean, batidas: [4 textos "HH:MM"] }
+   * Devolve { erros:[{dia, msg}], totalMin, porDia:[minutos|null], dsr, excedeMin, situacao, domingoTrabalha }
    * situacao: "erro" (dados incompletos ou fora da regra), "excede" (passa de 42 h) ou "ok".
    */
   function avaliar(dias) {
     var erros = [];
     var total = 0;
+    var porDia = [];
     var dsr = dias.filter(function (d) { return d.dsr; }).length;
 
     dias.forEach(function (d, i) {
+      porDia.push(null);
       if (d.dsr) return;
-      var min = lerHoras(d.horas);
-      if (min === null) erros.push({ dia: i, msg: NOMES[i] + ": informe as horas trabalhadas ou marque como DSR." });
-      else if (isNaN(min)) erros.push({ dia: i, msg: NOMES[i] + ": horas inválidas. Use, por exemplo, 8 ou 8:30." });
-      else if (min === 0) erros.push({ dia: i, msg: NOMES[i] + ": 0 hora é descanso. Marque como DSR ou informe as horas." });
-      else if (min > LIMITE_DIA) erros.push({ dia: i, msg: NOMES[i] + ": " + formatar(min) + " passa do máximo de " + formatar(LIMITE_DIA) + " por dia." });
-      else total += min;
+      var b = (d.batidas || []).map(lerHora);
+      while (b.length < 4) b.push(null);
+      var nome = NOMES[i];
+      var faltam = b.some(function (x) { return x === null; });
+      if (b.some(function (x) { return x !== null && isNaN(x); })) {
+        erros.push({ dia: i, msg: nome + ": horário inválido. Use o formato 08:00." });
+      } else if (faltam) {
+        erros.push({ dia: i, msg: nome + ": preencha as 4 batidas ou marque como DSR." });
+      } else if (!(b[0] < b[1] && b[1] < b[2] && b[2] < b[3])) {
+        erros.push({ dia: i, msg: nome + ": os horários precisam estar em ordem (1ª, 2ª, 3ª e 4ª batida, uma depois da outra)." });
+      } else {
+        var min = (b[1] - b[0]) + (b[3] - b[2]);
+        porDia[i] = min;
+        if (min > LIMITE_DIA) erros.push({ dia: i, msg: nome + ": " + formatar(min) + " passa do máximo de " + formatar(LIMITE_DIA) + " por dia." });
+        else total += min;
+      }
     });
 
     if (dsr < DSR_EXIGIDOS) erros.push({ dia: null, msg: "Escolha 2 dias de DSR (descanso semanal remunerado). Você marcou " + dsr + "." });
@@ -57,8 +68,8 @@
 
     var excede = Math.max(0, total - LIMITE_SEMANA);
     var situacao = erros.length ? "erro" : excede ? "excede" : "ok";
-    return { erros: erros, totalMin: total, dsr: dsr, excedeMin: excede, situacao: situacao, domingoTrabalha: !dias[DOMINGO].dsr };
+    return { erros: erros, totalMin: total, porDia: porDia, dsr: dsr, excedeMin: excede, situacao: situacao, domingoTrabalha: !dias[DOMINGO].dsr };
   }
 
-  return { NOMES: NOMES, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, lerHoras: lerHoras, formatar: formatar, avaliar: avaliar };
+  return { NOMES: NOMES, BATIDAS: BATIDAS, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, lerHora: lerHora, formatar: formatar, avaliar: avaliar };
 });

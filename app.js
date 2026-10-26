@@ -5,21 +5,27 @@
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
 
-  var EXEMPLO = ["8", "8", "8", "8", "8", "4", null]; // 6x1 de 44 h; null = DSR
+  var NORMAL = ["08:00", "12:00", "13:00", "17:00"]; // 8 h
+  var SABADO = ["08:00", "10:00", "10:15", "12:15"]; // 4 h
+  var EXEMPLO = [NORMAL, NORMAL, NORMAL, NORMAL, NORMAL, SABADO, null]; // 6x1 de 44 h; null = DSR
 
   /* ---------- Linhas dos 7 dias ---------- */
   $("#dias").innerHTML = E.NOMES.map(function (nome, i) {
+    var batidas = E.BATIDAS.map(function (rot, k) {
+      return '<div><label for="b' + i + k + '">' + rot + '</label><input id="b' + i + k + '" type="time" step="60"></div>';
+    }).join("");
     return '<div class="dia" data-i="' + i + '">' +
-      '<span class="nome">' + nome + "</span>" +
-      '<div class="campos">' +
-      '<div><label for="t' + i + '">Situação</label><select id="t' + i + '"><option value="t">Trabalha</option><option value="d">DSR (descanso)</option></select></div>' +
-      '<div><label for="h' + i + '">Horas</label><input id="h' + i + '" type="text" inputmode="decimal" placeholder="Ex.: 8 ou 8:30"></div>' +
-      "</div></div>";
+      '<div class="cab"><span class="nome">' + nome + '</span>' +
+      '<select id="t' + i + '" aria-label="Situação de ' + nome + '"><option value="t">Trabalha</option><option value="d">DSR (descanso)</option></select></div>' +
+      '<div class="batidas">' + batidas + "</div>" +
+      '<p class="horas-dia" id="r' + i + '"></p></div>';
   }).join("");
+
+  function batidasDe(i) { return [0, 1, 2, 3].map(function (k) { return $("#b" + i + k).value; }); }
 
   function ler() {
     return E.NOMES.map(function (_, i) {
-      return { dsr: $("#t" + i).value === "d", horas: $("#h" + i).value };
+      return { dsr: $("#t" + i).value === "d", batidas: batidasDe(i) };
     });
   }
 
@@ -29,7 +35,9 @@
 
     dias.forEach(function (d, i) {
       var linha = document.querySelector('.dia[data-i="' + i + '"]');
-      $("#h" + i).disabled = d.dsr;
+      [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).disabled = d.dsr; });
+      linha.querySelector(".batidas").hidden = d.dsr;
+      $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : "Horas do dia: " + E.formatar(r.porDia[i]);
       linha.classList.toggle("dsr", d.dsr);
       linha.classList.toggle("problema", r.erros.some(function (e) { return e.dia === i; }));
     });
@@ -39,7 +47,7 @@
     if (r.situacao === "erro") {
       html += '<div class="msg erro"><h2>Corrija para continuar</h2><ul>' + r.erros.map(function (e) { return "<li>" + esc(e.msg) + "</li>"; }).join("") + "</ul></div>";
     } else if (r.situacao === "excede") {
-      html += '<div class="msg aviso"><h2>A escala passa do limite semanal</h2><p>Faltam reduzir <strong>' + esc(E.formatar(r.excedeMin)) + "</strong> para caber em " + esc(E.formatar(E.LIMITE_SEMANA)) + ". Diminua a escala: edite as horas de um ou mais dias acima.</p></div>";
+      html += '<div class="msg aviso"><h2>A escala passa do limite semanal</h2><p>Faltam reduzir <strong>' + esc(E.formatar(r.excedeMin)) + "</strong> para caber em " + esc(E.formatar(E.LIMITE_SEMANA)) + ". Diminua a escala: edite as batidas de um ou mais dias acima.</p></div>";
     } else {
       html += '<div class="msg ok"><h2>Dentro do limite</h2><p>A escala cabe em ' + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana e tem 2 dias de DSR. Você pode continuar.</p></div>";
       if (r.domingoTrabalha) html += '<div class="msg aviso"><p>Atenção: um dos dias de DSR deve ser, preferencialmente, o domingo.</p></div>';
@@ -61,12 +69,12 @@
     if (r.situacao !== "ok") return;
     var linhas = dias.map(function (d, i) {
       return d.dsr
-        ? '<tr class="dsr"><td>' + E.NOMES[i] + '</td><td class="n">DSR</td></tr>'
-        : "<tr><td>" + E.NOMES[i] + '</td><td class="n">' + esc(E.formatar(E.lerHoras(d.horas))) + "</td></tr>";
+        ? '<tr class="dsr"><td>' + E.NOMES[i] + '</td><td>DSR</td><td class="n">—</td></tr>'
+        : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + '</td><td class="n">' + esc(E.formatar(r.porDia[i])) + "</td></tr>";
     }).join("");
     var el = $("#final");
     el.innerHTML = "<h2>Escala conferida</h2><p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR.</p>" +
-      '<table><thead><tr><th>Dia</th><th class="n">Horas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td>Total da semana</td><td class="n">' + esc(E.formatar(r.totalMin)) + "</td></tr></tfoot></table>" +
+      '<table><thead><tr><th>Dia</th><th>Batidas</th><th class="n">Horas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td colspan="2">Total da semana</td><td class="n">' + esc(E.formatar(r.totalMin)) + "</td></tr></tfoot></table>" +
       '<div class="acoes"><button type="button" class="btn primario" id="imprimir">Imprimir ou salvar em PDF</button></div>';
     el.hidden = false;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -75,16 +83,16 @@
   });
 
   $("#exemplo").addEventListener("click", function () {
-    EXEMPLO.forEach(function (h, i) {
-      $("#t" + i).value = h === null ? "d" : "t";
-      $("#h" + i).value = h === null ? "" : h;
+    EXEMPLO.forEach(function (b, i) {
+      $("#t" + i).value = b === null ? "d" : "t";
+      [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = b === null ? "" : b[k]; });
     });
     esconderFinal();
     mostrar();
   });
 
   $("#limpar").addEventListener("click", function () {
-    E.NOMES.forEach(function (_, i) { $("#t" + i).value = "t"; $("#h" + i).value = ""; });
+    E.NOMES.forEach(function (_, i) { $("#t" + i).value = "t"; [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = ""; }); });
     esconderFinal();
     mostrar();
   });

@@ -3,15 +3,15 @@
 Página única em **HTML, CSS e JavaScript puros** (sem instalar nada, sem servidor, sem banco). Só horas: **não há salário, valores em dinheiro nem porcentagens**.
 
 ## Como funciona
-1. A pessoa informa a escala que a empresa usa hoje, **dia a dia** (segunda a domingo): cada dia é **Trabalha** (com as horas) ou **DSR** (descanso semanal remunerado).
+1. A pessoa informa a escala que a empresa usa hoje, **dia a dia** (segunda a domingo): cada dia é **Trabalha** (com as **4 batidas**: 1ª entrada, 2ª saída para o intervalo, 3ª volta do intervalo, 4ª saída) ou **DSR** (descanso semanal remunerado).
 2. O sistema soma o **total semanal** e confere:
    - exatamente **2 dias de DSR** (mais ou menos que isso é erro);
-   - cada dia trabalhado com horas informadas, de até 10 h;
+   - cada dia trabalhado com as 4 batidas preenchidas, em ordem, e até 10 h no dia (horas do dia = (2ª − 1ª) + (4ª − 3ª));
    - total de até **42 h** por semana. Se passar, mostra um aviso com quantas horas faltam reduzir e deixa **editar qualquer dia** da semana;
    - se o domingo não for DSR, lembra que um dos DSR deve ser, preferencialmente, no domingo.
 3. Só com a escala dentro das regras o botão **Continuar** libera a tela final, com a escala conferida e o botão de **imprimir ou salvar em PDF**.
 
-As horas aceitam `8`, `8,5`, `8:30` e `8h30`. Os dados **não saem do navegador**.
+Os dados **não saem do navegador**.
 
 ## Arquivos
 - `escala.js`: as regras (sem tela), testadas em `tests/escala.test.js`. Limites no topo do arquivo: 42 h por semana, 10 h por dia, 2 DSR.
