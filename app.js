@@ -12,7 +12,7 @@
   /* ---------- Linhas dos 7 dias ---------- */
   $("#dias").innerHTML = E.NOMES.map(function (nome, i) {
     var batidas = E.BATIDAS.map(function (rot, k) {
-      return '<div><label for="b' + i + k + '">' + rot + '</label><input id="b' + i + k + '" type="time" step="60"></div>';
+      return '<div><label for="b' + i + k + '">' + rot + '</label><input id="b' + i + k + '" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" autocomplete="off"></div>';
     }).join("");
     return '<div class="dia" data-i="' + i + '">' +
       '<div class="cab"><span class="nome">' + nome + '</span>' +
@@ -64,6 +64,19 @@
   }
 
   function esconderFinal() { $("#final").hidden = true; $("#final").innerHTML = ""; }
+
+  // Máscara HH:MM e salto automático: ao completar os 4 dígitos, o foco vai para a próxima batida.
+  $("#dias").addEventListener("input", function (ev) {
+    var campo = ev.target;
+    if (!campo.matches(".batidas input")) return;
+    var d = campo.value.replace(/\D/g, "").slice(0, 4);
+    campo.value = d.length > 2 ? d.slice(0, 2) + ":" + d.slice(2) : d;
+    if (d.length === 4 && ev.inputType && ev.inputType.indexOf("insert") === 0) {
+      var todos = Array.prototype.slice.call(document.querySelectorAll("#dias .batidas input:not(:disabled)"));
+      var prox = todos[todos.indexOf(campo) + 1];
+      if (prox) { prox.focus(); prox.select(); }
+    }
+  });
 
   $("#form").addEventListener("input", function () { tocou = true; esconderFinal(); mostrar(); });
   $("#form").addEventListener("change", function () { tocou = true; esconderFinal(); mostrar(); });
