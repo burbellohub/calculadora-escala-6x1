@@ -13,16 +13,6 @@
   var dataBr = function (iso) { return iso ? iso.split("-").reverse().join("/") : null; };
   var plural = function (n, um, varios) { return n === 1 ? um : varios; };
 
-  /** Aceita "2.500,50", "2500,5", "2500.5" e "2.500". Devolve null (vazio), NaN (inválido) ou o número. */
-  function lerNumero(txt) {
-    var t = String(txt == null ? "" : txt).trim().replace(/\s/g, "").replace(/^R\$/i, "");
-    if (!t) return null;
-    if (t.indexOf(",") >= 0) t = t.replace(/\./g, "").replace(",", ".");
-    else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
-    var n = Number(t);
-    return isFinite(n) ? n : NaN;
-  }
-
   /* ---------- Cabeçalho, situação e rodapé (vêm do config.js) ---------- */
   function linkZap(texto) {
     return "https://wa.me/" + CFG.contatoWhatsApp + "?text=" + encodeURIComponent(texto || "Olá! Usei o simulador do fim da escala 6x1 e gostaria de conversar.");
@@ -31,54 +21,81 @@
     $("#contato-box").innerHTML = '<a class="btn whats" href="' + esc(linkZap()) + '" target="_blank" rel="noopener noreferrer">' + esc(CFG.contatoTexto) + "</a>";
   }
 
-  /* ---------- Leitura e validação ---------- */
-  var CAMPOS_ERRO = ["funcionarios", "salario", "encargos", "adicional", "dias", "equipeMinima", "promulgacao"];
+  /* ---------- Leitura e validação (regras em validacao.js) ---------- */
+  var V = window.Validacao;
+  var ORDEM_CAMPOS = ["funcionarios", "salario", "encargos", "horas", "adicional", "dias", "equipeMinima", "promulgacao"];
+  var estado = { tentou: false, confirmados: {} }; // confirmados[id] = texto do aviso confirmado
+
+  function hojeISO() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function coletar() {
+    var f = $("#form");
+    return {
+      funcionarios: f.funcionarios.value, salario: f.salario.value, encargos: f.encargos.value, adicional: f.adicional.value,
+      horas: Number(f.horas.value), escalaAtual: Number(f.escalaAtual.value), equipeMinima: f.equipeMinima.value, promulgacao: f.promulgacao.value,
+      dias: Array.prototype.map.call(f.querySelectorAll('input[name="dias"]:checked'), function (c) { return Number(c.value); }),
+    };
+  }
+
+  function campoDe(nome) { return nome === "dias" ? $('input[name="dias"]') : $("#" + nome); }
 
   function mostrarErro(campo, msg) {
     var el = $("#e-" + campo);
-    var entrada = $("#" + campo);
+    var entrada = campo === "dias" ? null : $("#" + campo);
     if (el) { el.textContent = msg || ""; el.hidden = !msg; }
     if (entrada) { if (msg) entrada.setAttribute("aria-invalid", "true"); else entrada.removeAttribute("aria-invalid"); }
   }
 
-  function lerFormulario() {
-    var erros = {};
-    var f = $("#form");
+  /** Atualiza as mensagens na tela e devolve o resultado da validação. */
+  function avaliar() {
+    var r = V.validar(coletar(), CFG.limites, hojeISO());
 
-    var funcionarios = lerNumero(f.funcionarios.value);
-    if (funcionarios === null || isNaN(funcionarios) || funcionarios < 1 || funcionarios > 5000 || Math.floor(funcionarios) !== funcionarios) erros.funcionarios = "Informe um número inteiro de 1 a 5000.";
+    // Erros: uma mensagem por campo (a primeira) + resumo logo acima do botão.
+    var porCampo = {};
+    r.erros.forEach(function (e) { if (!porCampo[e.campo]) porCampo[e.campo] = e.msg; });
+    ORDEM_CAMPOS.forEach(function (c) { mostrarErro(c, porCampo[c] || ""); });
+    var resumo = $("#resumo-erros");
+    if (r.erros.length) {
+      var itens = ORDEM_CAMPOS.filter(function (c) { return porCampo[c]; }).map(function (c) {
+        return '<li><a href="#' + (c === "dias" ? "rot-dias" : c) + '" data-campo="' + c + '">' + esc(porCampo[c]) + "</a></li>";
+      }).join("");
+      resumo.innerHTML = "<h2>Corrija " + (r.erros.length === 1 ? "este item" : "estes itens") + " para continuar</h2><ul>" + itens + "</ul>";
+      resumo.hidden = false;
+    } else {
+      resumo.hidden = true;
+      resumo.innerHTML = "";
+    }
 
-    var salario = lerNumero(f.salario.value);
-    if (salario === null || isNaN(salario) || salario <= 0) erros.salario = "Informe o salário médio mensal, por exemplo 2.400,00.";
-
-    var encargos = lerNumero(f.encargos.value);
-    if (encargos === null) encargos = 0;
-    if (isNaN(encargos) || encargos < 0 || encargos > 300) erros.encargos = "Use um valor entre 0 e 300.";
-
-    var adicional = lerNumero(f.adicional.value);
-    if (adicional === null) adicional = 50;
-    if (isNaN(adicional) || adicional < 0 || adicional > 300) erros.adicional = "Use um valor entre 0 e 300.";
-
-    var dias = Array.prototype.map.call(f.querySelectorAll('input[name="dias"]:checked'), function (c) { return Number(c.value); });
-    if (!dias.length) erros.dias = "Marque ao menos um dia em que a empresa abre.";
-
-    var equipeMinima = lerNumero(f.equipeMinima.value);
-    if (equipeMinima === null || isNaN(equipeMinima) || equipeMinima < 1 || Math.floor(equipeMinima) !== equipeMinima) erros.equipeMinima = "Informe um número inteiro a partir de 1.";
-
-    var promulgacao = f.promulgacao.value || null;
-    if (promulgacao && !/^\d{4}-\d{2}-\d{2}$/.test(promulgacao)) erros.promulgacao = "Data inválida.";
-
-    CAMPOS_ERRO.forEach(function (c) { mostrarErro(c, erros[c]); });
-    if (Object.keys(erros).length) return { erros: erros };
-
-    return {
-      erros: null,
-      dados: {
-        funcionarios: funcionarios, salario: salario, encargosPct: encargos, adicionalExtraPct: adicional,
-        horasAtuais: Number(f.horas.value), diasTrabalhoAtuais: Number(f.escalaAtual.value),
-        diasAbertos: dias, equipeMinima: equipeMinima, promulgacao: promulgacao,
-      },
-    };
+    // Avisos: precisam de confirmação consciente; a confirmação some se o texto do aviso mudou.
+    Object.keys(estado.confirmados).forEach(function (id) {
+      if (!r.avisos.some(function (a) { return a.id === id && a.msg === estado.confirmados[id]; })) delete estado.confirmados[id];
+    });
+    var painel = $("#painel-avisos");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-aviso]"), function (el) { el.removeAttribute("data-aviso"); });
+    if (r.avisos.length) {
+      r.avisos.forEach(function (a) { var el = campoDe(a.campo); if (el && a.campo !== "dias") el.setAttribute("data-aviso", "1"); });
+      painel.innerHTML = '<h2 id="avisos-titulo">Confira estes pontos fora do padrão</h2><p class="nota">Se estiver tudo certo, marque cada item para confirmar. Para continuar, é preciso confirmar todos ou corrigir os dados.</p>' +
+        r.avisos.map(function (a) {
+          var ok = estado.confirmados[a.id] === a.msg;
+          return '<label class="aviso-item ' + (ok ? "" : "pendente") + '"><input type="checkbox" data-aviso-id="' + esc(a.id) + '"' + (ok ? " checked" : "") + "><span>" + esc(a.msg) + "</span></label>";
+        }).join("");
+      painel.hidden = false;
+      Array.prototype.forEach.call(painel.querySelectorAll("input[data-aviso-id]"), function (cb, i) {
+        cb.addEventListener("change", function () {
+          var a = r.avisos[i];
+          if (cb.checked) estado.confirmados[a.id] = a.msg; else delete estado.confirmados[a.id];
+          cb.closest(".aviso-item").classList.toggle("pendente", !cb.checked);
+          painel.classList.remove("cobrando");
+        });
+      });
+    } else {
+      painel.hidden = true;
+      painel.innerHTML = "";
+    }
+    return r;
   }
 
   /* ---------- Montagem do resultado ---------- */
@@ -197,7 +214,7 @@
 
   var ultimoTexto = "";
 
-  function simular(p) {
+  function simular(p, confirmados) {
     var imp = E.simularImpacto({
       funcionarios: p.funcionarios, salario: p.salario, encargosPct: p.encargosPct, horasAtuais: p.horasAtuais,
       adicionalExtraPct: p.adicionalExtraPct, promulgacao: p.promulgacao, etapas: CFG.regras.etapas,
@@ -213,7 +230,8 @@
       (CFG.contatoWhatsApp ? '<a class="btn whats" target="_blank" rel="noopener noreferrer" href="' + esc(linkZap("Olá! Fiz a simulação do fim da escala 6x1:\n\n" + ultimoTexto)) + '">' + esc(CFG.contatoTexto) + "</a>" : "") + '</div><p class="sub" id="copiado" role="status"></p>';
 
     var el = $("#resultado");
-    el.innerHTML = secaoResumo(p, imp, eq) + secaoLinhaDoTempo(p, imp) + secaoTabela(p, imp) + secaoEscala(p, esc5, eq) + secaoAtencao() + acoes;
+    var conf = confirmados.length ? '<section class="bloco confirmados"><h2>Pontos fora do padrão que você confirmou</h2><p class="sub">Estes itens foram considerados corretos nesta simulação.</p><ul class="lista">' + confirmados.map(function (a) { return "<li>" + esc(a.msg) + "</li>"; }).join("") + "</ul></section>" : "";
+    el.innerHTML = secaoResumo(p, imp, eq) + secaoLinhaDoTempo(p, imp) + secaoTabela(p, imp) + secaoEscala(p, esc5, eq) + conf + secaoAtencao() + acoes;
     el.hidden = false;
     el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     el.focus({ preventScroll: true });
@@ -228,38 +246,79 @@
   }
 
   /* ---------- Eventos ---------- */
-  $("#form").addEventListener("submit", function (ev) {
+  var form = $("#form");
+
+  function esconderResultado() { var r = $("#resultado"); r.hidden = true; r.innerHTML = ""; }
+
+  form.addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var r = lerFormulario();
-    if (r.erros) {
-      var primeiro = CAMPOS_ERRO.filter(function (c) { return r.erros[c]; })[0];
-      var alvo = primeiro === "dias" ? $('input[name="dias"]') : $("#" + primeiro);
-      if (alvo) alvo.focus();
-      $("#resultado").hidden = true;
+    estado.tentou = true;
+    var r = avaliar();
+
+    if (r.erros.length) {
+      esconderResultado();
+      var primeiro = ORDEM_CAMPOS.filter(function (c) { return r.erros.some(function (e) { return e.campo === c; }); })[0];
+      var alvo = campoDe(primeiro);
+      $("#resumo-erros").scrollIntoView({ block: "center" });
+      if (alvo) alvo.focus({ preventScroll: true });
       return;
     }
-    simular(r.dados);
+
+    var pendentes = r.avisos.filter(function (a) { return estado.confirmados[a.id] !== a.msg; });
+    if (pendentes.length) {
+      esconderResultado();
+      var painel = $("#painel-avisos");
+      painel.classList.add("cobrando");
+      painel.scrollIntoView({ block: "center" });
+      var cb = painel.querySelector("input:not(:checked)");
+      if (cb) cb.focus({ preventScroll: true });
+      return;
+    }
+
+    $("#painel-avisos").classList.remove("cobrando");
+    simular(r.dados, r.avisos);
   });
 
-  $("#form").addEventListener("reset", function () {
+  // Depois da primeira tentativa, as mensagens acompanham o que a pessoa digita.
+  // Qualquer mudança nos dados invalida o resultado já exibido (evita decidir em cima de número velho).
+  function aoMudar(ev) {
+    if (ev.target.closest && ev.target.closest("#painel-avisos")) return;
+    if (!$("#resultado").hidden) esconderResultado();
+    if (estado.tentou) avaliar();
+  }
+  form.addEventListener("input", aoMudar);
+  form.addEventListener("change", aoMudar);
+
+  $("#resumo-erros").addEventListener("click", function (ev) {
+    var a = ev.target.closest("a[data-campo]");
+    if (!a) return;
+    ev.preventDefault();
+    var alvo = campoDe(a.getAttribute("data-campo"));
+    if (alvo) { alvo.scrollIntoView({ block: "center" }); alvo.focus({ preventScroll: true }); }
+  });
+
+  form.addEventListener("reset", function () {
+    estado.tentou = false;
+    estado.confirmados = {};
     setTimeout(function () {
-      CAMPOS_ERRO.forEach(function (c) { mostrarErro(c, ""); });
-      $("#resultado").hidden = true;
-      $("#resultado").innerHTML = "";
+      ORDEM_CAMPOS.forEach(function (c) { mostrarErro(c, ""); });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-aviso]"), function (el) { el.removeAttribute("data-aviso"); });
+      $("#resumo-erros").hidden = true;
+      $("#painel-avisos").hidden = true;
+      esconderResultado();
     }, 0);
   });
 
   $("#exemplo").addEventListener("click", function () {
-    var f = $("#form");
-    f.funcionarios.value = "12";
-    f.salario.value = "2.400,00";
-    f.encargos.value = "70";
-    f.horas.value = "44";
-    f.escalaAtual.value = "6";
-    f.adicional.value = "50";
-    f.equipeMinima.value = "3";
-    f.promulgacao.value = "";
-    Array.prototype.forEach.call(f.querySelectorAll('input[name="dias"]'), function (c) { c.checked = c.value !== "0"; });
-    f.requestSubmit();
+    form.funcionarios.value = "12";
+    form.salario.value = "2.400,00";
+    form.encargos.value = "70";
+    form.horas.value = "44";
+    form.escalaAtual.value = "6";
+    form.adicional.value = "50";
+    form.equipeMinima.value = "3";
+    form.promulgacao.value = "";
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="dias"]'), function (c) { c.checked = c.value !== "0"; });
+    form.requestSubmit();
   });
 })();

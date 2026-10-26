@@ -16,6 +16,13 @@ Fica **fora** da conta (aparece como aviso na tela): micro e pequenas empresas e
 
 > Confirme sempre no texto oficial da Emenda quando ela for publicada. As regras ficam em `config.js`.
 
+## Erros e avisos (o usuário só avança se resolver)
+A tela confere os dados antes de simular, em dois níveis (regras em `validacao.js`, limites em `config.js`, com testes):
+
+- **Erro (bloqueia até corrigir):** campo vazio ou inválido; adicional de hora extra abaixo de 50%; equipe mínima maior que o número de funcionários; empresa que abre menos de 5 dias (a escala 5x2 não fecha) ou menos de 6 dias com "6x1"; jornada que dá mais de 10 h por dia; data de publicação inválida ou anterior à aprovação no Senado (14/10/2026).
+- **Aviso (bloqueia até confirmar):** salário médio abaixo do salário mínimo (R$ 1.621,00 em 2026, proporcional à jornada) ou muito alto; encargos acima de 120%; 5x2 com 44 h (8,8 h por dia, acima de 8 h, só com compensação por acordo); equipe menor que a necessária até na escala de hoje; data de publicação a mais de 12 meses. Cada aviso tem uma caixa "confirmo"; o que foi confirmado aparece no resultado.
+- Mudou qualquer dado depois de simular? O resultado antigo some, para ninguém decidir em cima de número velho.
+
 ## Como atualizar
 Tudo que muda com o tempo está em **`config.js`**:
 - `regras.situacao` e `regras.consultadoEm`: a situação da Emenda (promulgada? data?);
@@ -23,13 +30,13 @@ Tudo que muda com o tempo está em **`config.js`**:
 - `regras.atencao` e `regras.fontes`;
 - `contatoWhatsApp`: WhatsApp do RH, só números com DDI (ex.: `5541999999999`). Vazio = o botão "Falar com o RH" não aparece.
 
-Os cálculos estão em `calc.js` (sem tela) e têm testes.
+Os cálculos estão em `calc.js` e a validação em `validacao.js` (ambos sem tela e com testes). Atualize o salário mínimo em `limites.salarioMinimo` a cada ano.
 
 ## Rodar e testar
 Abra o `index.html` no navegador (duplo clique), ou:
 ```bash
 python -m http.server 8000   # http://localhost:8000
-npm test                     # testes dos cálculos (Node 20+; sem dependências)
+npm test                     # testes dos cálculos e da validação (Node 20+; sem dependências)
 ```
 
 ## Publicar

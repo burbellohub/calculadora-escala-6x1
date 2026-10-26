@@ -61,6 +61,7 @@
               <option value="36">36 horas</option>
               <option value="30">30 horas</option>
             </select>
+            <p class="erro" id="e-horas" hidden></p>
           </div>
           <div class="campo">
             <label for="escalaAtual">Escala hoje</label>
@@ -108,6 +109,9 @@
         </div>
       </fieldset>
 
+      <div id="resumo-erros" class="painel painel-erros" role="alert" tabindex="-1" hidden></div>
+      <div id="painel-avisos" class="painel painel-avisos" role="group" aria-labelledby="avisos-titulo" tabindex="-1" hidden></div>
+
       <div class="acoes">
         <button type="submit" class="btn primario">Simular</button>
         <button type="button" class="btn" id="exemplo">Usar um exemplo</button>
@@ -126,6 +130,7 @@
   </footer>
 
   <script src="calc.js"></script>
+  <script src="validacao.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

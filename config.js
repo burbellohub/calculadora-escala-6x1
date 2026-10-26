@@ -10,6 +10,23 @@ window.CONFIG = {
   contatoWhatsApp: "",
   contatoTexto: "Falar com o RH",
 
+  /** Limites usados para barrar dados errados ou fora do padrão. */
+  limites: {
+    funcionariosMax: 5000,
+    /** Salário mínimo nacional de 2026: R$ 1.621,00 (Decreto 12.797/2025, vigente desde 01/01/2026). Atualize todo ano. */
+    salarioMinimo: 1621,
+    salarioMaximoAceito: 500000,
+    salarioAvisoAcima: 25000,
+    encargosAvisoAcima: 120,
+    /** Adicional mínimo de hora extra: 50% (CF, art. 7º, XVI). */
+    adicionalExtraMinimo: 50,
+    /** Limite diário normal (8 h) e máximo com compensação (10 h: 8 + 2 extras, CLT art. 59). */
+    jornadaDiariaPadrao: 8,
+    jornadaDiariaMaxima: 10,
+    /** Data da aprovação final no Senado. A Emenda não pode ter sido publicada antes. */
+    aprovacaoISO: "2026-10-14",
+  },
+
   regras: {
     /** Quando a regra foi conferida pela última vez. */
     consultadoEm: "26/10/2026",

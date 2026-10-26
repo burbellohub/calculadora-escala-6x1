@@ -4,6 +4,6 @@
   "private": true,
   "description": "Simulador do impacto do fim da escala 6x1 (HTML, CSS e JavaScript puros).",
   "scripts": {
-    "test": "node --test tests/calc.test.js"
+    "test": "node --test tests/calc.test.js tests/validacao.test.js"
   }
 }
