@@ -5,9 +5,8 @@
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
 
-  var NORMAL = ["08:00", "12:00", "13:00", "17:00"]; // 8 h
-  var SABADO = ["08:00", "10:00", "10:15", "12:15"]; // 4 h
-  var EXEMPLO = [NORMAL, NORMAL, NORMAL, NORMAL, NORMAL, SABADO, null]; // 6x1 de 44 h; null = DSR
+  var DIA = ["08:00", "12:00", "13:00", "17:24"]; // 8 h 24
+  var EXEMPLO = [DIA, DIA, DIA, DIA, DIA, null, null]; // 5x2 de 42 h; null = DSR
 
   /* ---------- Linhas dos 7 dias ---------- */
   $("#dias").innerHTML = E.NOMES.map(function (nome, i) {
