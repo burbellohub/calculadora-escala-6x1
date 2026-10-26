@@ -65,11 +65,25 @@
 
   function esconderFinal() { $("#final").hidden = true; $("#final").innerHTML = ""; }
 
+  /** Aceita só dígitos que formam um horário real (00:00 a 23:59): descarta o que não existe, como 80:00 ou 12:79. */
+  function soHorasValidas(txt) {
+    var out = "";
+    txt.replace(/\D/g, "").split("").forEach(function (c) {
+      var n = out.length;
+      if (n === 4) return;
+      if (n === 0 && c > "2") out = "0" + c; // 8 vira 08
+      else if (n === 1 && out[0] === "2" && c > "3") return; // 24 a 29 não existem
+      else if (n === 2 && c > "5") return; // minutos de 00 a 59
+      else out += c;
+    });
+    return out;
+  }
+
   // Máscara HH:MM e salto automático: ao completar os 4 dígitos, o foco vai para a próxima batida.
   $("#dias").addEventListener("input", function (ev) {
     var campo = ev.target;
     if (!campo.matches(".batidas input")) return;
-    var d = campo.value.replace(/\D/g, "").slice(0, 4);
+    var d = soHorasValidas(campo.value);
     campo.value = d.length > 2 ? d.slice(0, 2) + ":" + d.slice(2) : d;
     if (d.length === 4 && ev.inputType && ev.inputType.indexOf("insert") === 0) {
       var todos = Array.prototype.slice.call(document.querySelectorAll("#dias .batidas input:not(:disabled)"));
