@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulador do fim da escala 6x1 | Burbello</title>
+  <meta name="description" content="Simule o impacto da redução da jornada (44 h para 42 h e 40 h) e da escala 5x2 na folha e na equipe da sua empresa. Os dados ficam só no seu navegador.">
+  <meta name="theme-color" content="#0f4fc4">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f4fc4'/%3E%3Cpath d='M16 20h32M16 32h32M16 44h20' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <meta property="og:title" content="Simulador do fim da escala 6x1">
+  <meta property="og:description" content="Veja quanto a nova jornada muda a folha e a escala da sua empresa.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <a class="pular" href="#form">Pular para o simulador</a>
+
+  <header class="topo">
+    <div class="miolo topo-in">
+      <span class="marca" id="marca"></span>
+      <span class="setor" id="setor"></span>
+    </div>
+  </header>
+
+  <main class="miolo">
+    <section class="intro">
+      <p class="selo">Simulador gratuito</p>
+      <h1>Fim da escala 6x1: quanto muda para a sua empresa?</h1>
+      <p class="lead">Informe poucos dados e veja o impacto da jornada de <strong>44 h para 42 h e depois 40 h</strong>, com <strong>dois dias de descanso por semana</strong>, na sua folha e na sua escala. Nada é enviado: os dados ficam só no seu navegador.</p>
+      <p class="situacao" id="situacao" role="note"></p>
+    </section>
+    <script src="topo.js"></script>
+
+    <form id="form" novalidate autocomplete="off">
+      <fieldset>
+        <legend>1. Sua equipe</legend>
+        <div class="grade">
+          <div class="campo">
+            <label for="funcionarios">Funcionários na escala</label>
+            <input id="funcionarios" name="funcionarios" type="number" inputmode="numeric" min="1" max="5000" step="1" placeholder="Ex.: 12">
+            <p class="erro" id="e-funcionarios" hidden></p>
+          </div>
+          <div class="campo">
+            <label for="salario">Salário médio mensal (R$)</label>
+            <input id="salario" name="salario" type="text" inputmode="decimal" placeholder="Ex.: 2.400,00">
+            <p class="erro" id="e-salario" hidden></p>
+          </div>
+          <div class="campo">
+            <label for="encargos">Encargos e benefícios sobre o salário (%) <span class="opc">opcional</span></label>
+            <input id="encargos" name="encargos" type="text" inputmode="decimal" placeholder="Ex.: 70">
+            <p class="dica">Deixe em branco para usar só o salário.</p>
+            <p class="erro" id="e-encargos" hidden></p>
+          </div>
+          <div class="campo">
+            <label for="horas">Jornada semanal hoje</label>
+            <select id="horas" name="horas">
+              <option value="44" selected>44 horas (padrão)</option>
+              <option value="42">42 horas</option>
+              <option value="40">40 horas</option>
+              <option value="36">36 horas</option>
+              <option value="30">30 horas</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="escalaAtual">Escala hoje</label>
+            <select id="escalaAtual" name="escalaAtual">
+              <option value="6" selected>6x1 (trabalha 6 dias)</option>
+              <option value="5">5x2 (trabalha 5 dias)</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="adicional">Adicional de hora extra (%)</label>
+            <input id="adicional" name="adicional" type="text" inputmode="decimal" value="50">
+            <p class="dica">O mínimo legal é 50%. Use o da sua convenção, se for maior.</p>
+            <p class="erro" id="e-adicional" hidden></p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2. Funcionamento da empresa</legend>
+        <div class="campo">
+          <span class="rotulo" id="rot-dias">Dias em que a empresa abre</span>
+          <div class="dias" role="group" aria-labelledby="rot-dias">
+            <label class="dia"><input type="checkbox" name="dias" value="1" checked><span>Seg</span></label>
+            <label class="dia"><input type="checkbox" name="dias" value="2" checked><span>Ter</span></label>
+            <label class="dia"><input type="checkbox" name="dias" value="3" checked><span>Qua</span></label>
+            <label class="dia"><input type="checkbox" name="dias" value="4" checked><span>Qui</span></label>
+            <label class="dia"><input type="checkbox" name="dias" value="5" checked><span>Sex</span></label>
+            <label class="dia"><input type="checkbox" name="dias" value="6" checked><span>Sáb</span></label>
+            <label class="dia"><input type="checkbox" name="dias" value="0"><span>Dom</span></label>
+          </div>
+          <p class="erro" id="e-dias" hidden></p>
+        </div>
+        <div class="grade">
+          <div class="campo">
+            <label for="equipeMinima">Pessoas presentes por dia, no mínimo</label>
+            <input id="equipeMinima" name="equipeMinima" type="number" inputmode="numeric" min="1" max="500" step="1" value="1">
+            <p class="erro" id="e-equipeMinima" hidden></p>
+          </div>
+          <div class="campo">
+            <label for="promulgacao">Data de publicação da Emenda <span class="opc">opcional</span></label>
+            <input id="promulgacao" name="promulgacao" type="date">
+            <p class="dica">Se você já souber, mostramos as datas de cada etapa.</p>
+            <p class="erro" id="e-promulgacao" hidden></p>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="acoes">
+        <button type="submit" class="btn primario">Simular</button>
+        <button type="button" class="btn" id="exemplo">Usar um exemplo</button>
+        <button type="reset" class="btn" id="limpar">Limpar</button>
+      </div>
+    </form>
+
+    <section id="resultado" class="resultado" hidden aria-live="polite" tabindex="-1"></section>
+  </main>
+
+  <footer class="rodape">
+    <div class="miolo">
+      <p><strong>Importante:</strong> esta é uma <strong>estimativa para planejamento</strong>, feita com base nas informações que você digitou e nas regras da Emenda aprovada. Ela não substitui a análise do departamento de RH, da contabilidade ou de um advogado trabalhista, principalmente em convenções coletivas, jornadas especiais e pequenas empresas.</p>
+      <p id="contato-box"></p>
+    </div>
+  </footer>
+
+  <script src="calc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
