@@ -166,6 +166,7 @@
     var el = $("#final");
     var lei = extra.sexo === "m" ? textoLei() : "";
     el.innerHTML = '<div class="cabeca-final"><img class="logo-final" src="logo.png" alt="Burbello Escritório Contábil" width="150" height="99"><div><h2>Escala conferida</h2><p class="sub-final">Burbello Escritório Contábil · Departamento de RH · ' + esc(dataHoje()) + "</p></div></div>" +
+      "<p><strong>Funcionário(a): " + (extra.sexo === "m" ? "Mulher" : "Homem") + "</strong></p>" +
       "<p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR. " + esc(textoDomingo(extra, r.domingoTrabalha)) + "</p>" +
       '<table><thead><tr><th>Dia</th><th>Batidas</th><th class="n">Horas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td colspan="2">Total da semana</td><td class="n">' + esc(E.formatar(r.totalMin)) + "</td></tr></tfoot></table>" +
       lei + '<div class="acoes"><button type="button" class="btn primario" id="imprimir">Imprimir ou salvar em PDF</button></div>';
