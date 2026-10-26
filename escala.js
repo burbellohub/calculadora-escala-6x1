@@ -9,7 +9,7 @@
   "use strict";
 
   var NOMES = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
-  var BATIDAS = ["1ª batida (entrada)", "2ª batida (saída p/ intervalo)", "3ª batida (volta do intervalo)", "4ª batida (saída)"];
+  var BATIDAS = ["1ª · Entrada", "2ª · Saída intervalo", "3ª · Volta intervalo", "4ª · Saída"];
   var LIMITE_SEMANA = 42 * 60;
   var LIMITE_DIA = 10 * 60;
   var DSR_EXIGIDOS = 2;

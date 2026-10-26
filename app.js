@@ -23,6 +23,8 @@
 
   function batidasDe(i) { return [0, 1, 2, 3].map(function (k) { return $("#b" + i + k).value; }); }
 
+  var tocou = false; // só mostra erros depois que a pessoa mexe no formulário
+
   function ler() {
     return E.NOMES.map(function (_, i) {
       return { dsr: $("#t" + i).value === "d", batidas: batidasDe(i) };
@@ -39,12 +41,14 @@
       linha.querySelector(".batidas").hidden = d.dsr;
       $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : "Horas do dia: " + E.formatar(r.porDia[i]);
       linha.classList.toggle("dsr", d.dsr);
-      linha.classList.toggle("problema", r.erros.some(function (e) { return e.dia === i; }));
+      linha.classList.toggle("problema", tocou && r.erros.some(function (e) { return e.dia === i; }));
     });
 
     var html = '<div class="total">Total da semana: <strong>' + esc(E.formatar(r.totalMin)) + "</strong> (limite: " + esc(E.formatar(E.LIMITE_SEMANA)) + "). Dias de DSR: <strong>" + r.dsr + "</strong> de 2.</div>";
 
-    if (r.situacao === "erro") {
+    if (!tocou) {
+      html = '<div class="msg aviso"><p>Preencha as 4 batidas de cada dia de trabalho e marque os 2 dias de DSR. A conferência aparece aqui.</p></div>';
+    } else if (r.situacao === "erro") {
       html += '<div class="msg erro"><h2>Corrija para continuar</h2><ul>' + r.erros.map(function (e) { return "<li>" + esc(e.msg) + "</li>"; }).join("") + "</ul></div>";
     } else if (r.situacao === "excede") {
       html += '<div class="msg aviso"><h2>A escala passa do limite semanal</h2><p>Faltam reduzir <strong>' + esc(E.formatar(r.excedeMin)) + "</strong> para caber em " + esc(E.formatar(E.LIMITE_SEMANA)) + ". Diminua a escala: edite as batidas de um ou mais dias acima.</p></div>";
@@ -59,8 +63,8 @@
 
   function esconderFinal() { $("#final").hidden = true; $("#final").innerHTML = ""; }
 
-  $("#form").addEventListener("input", function () { esconderFinal(); mostrar(); });
-  $("#form").addEventListener("change", function () { esconderFinal(); mostrar(); });
+  $("#form").addEventListener("input", function () { tocou = true; esconderFinal(); mostrar(); });
+  $("#form").addEventListener("change", function () { tocou = true; esconderFinal(); mostrar(); });
   $("#form").addEventListener("submit", function (ev) { ev.preventDefault(); });
 
   $("#continuar").addEventListener("click", function () {
@@ -83,6 +87,7 @@
   });
 
   $("#exemplo").addEventListener("click", function () {
+    tocou = true;
     EXEMPLO.forEach(function (b, i) {
       $("#t" + i).value = b === null ? "d" : "t";
       [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = b === null ? "" : b[k]; });
@@ -92,6 +97,7 @@
   });
 
   $("#limpar").addEventListener("click", function () {
+    tocou = false;
     E.NOMES.forEach(function (_, i) { $("#t" + i).value = "t"; [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = ""; }); });
     esconderFinal();
     mostrar();
