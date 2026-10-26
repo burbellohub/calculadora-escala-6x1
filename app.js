@@ -5,8 +5,20 @@
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
 
-  var DIA = ["08:00", "12:00", "13:00", "17:24"]; // 8 h 24
-  var EXEMPLO = [DIA, DIA, DIA, DIA, DIA, null, null]; // 5x2 de 42 h; null = DSR
+  // Exemplos de escalas dentro do limite (batidas de segunda a domingo; null = DSR).
+  var D824 = ["08:00", "12:00", "13:00", "17:24"]; // 8 h 24
+  var D8 = ["08:00", "12:00", "13:00", "17:00"]; // 8 h
+  var D9 = ["08:00", "12:00", "13:00", "18:00"]; // 9 h
+  var D6 = ["08:00", "12:00", "13:00", "15:00"]; // 6 h
+  var D6S = ["08:00", "12:00", "12:15", "14:15"]; // 6 h, intervalo curto
+  var EXEMPLOS = [
+    { nome: "segunda a sexta, 8 h 24 por dia (42 h)", dias: [D824, D824, D824, D824, D824, null, null] },
+    { nome: "segunda a sexta, 8 h por dia (40 h)", dias: [D8, D8, D8, D8, D8, null, null] },
+    { nome: "9 h de segunda a quinta e 6 h na sexta (42 h)", dias: [D9, D9, D9, D9, D6, null, null] },
+    { nome: "terça a sábado, com DSR na segunda e no domingo (42 h)", dias: [null, D9, D9, D9, D9, D6S, null] },
+    { nome: "quarta e domingo de DSR, 8 h 24 nos outros dias (42 h)", dias: [D824, D824, null, D824, D824, D824, null] },
+  ];
+  var exemploAtual = 0;
 
   /* ---------- Linhas dos 7 dias ---------- */
   $("#dias").innerHTML = E.NOMES.map(function (nome, i) {
@@ -128,18 +140,27 @@
     mostrar();
   });
 
-  $("#exemplo").addEventListener("click", function () {
+  function preencherExemplo() {
     tocou = true;
-    EXEMPLO.forEach(function (b, i) {
+    var ex = EXEMPLOS[exemploAtual];
+    $("#nome-exemplo").textContent = "Exemplo " + (exemploAtual + 1) + " de " + EXEMPLOS.length + ": " + ex.nome + ".";
+    ex.dias.forEach(function (b, i) {
       $("#t" + i).value = b === null ? "d" : "t";
       [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = b === null ? "" : b[k]; });
     });
     esconderFinal();
     mostrar();
+  }
+
+  $("#exemplo").addEventListener("click", preencherExemplo);
+  $("#trocar").addEventListener("click", function () {
+    exemploAtual = (exemploAtual + 1) % EXEMPLOS.length;
+    preencherExemplo();
   });
 
   $("#limpar").addEventListener("click", function () {
     tocou = false;
+    $("#nome-exemplo").textContent = "";
     E.NOMES.forEach(function (_, i) { $("#t" + i).value = "t"; [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = ""; }); });
     esconderFinal();
     mostrar();
