@@ -6,7 +6,6 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
 
   /* ---------- Formatação ---------- */
-  var brl = function (v) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v); };
   var num = function (v, d) { d = d || 0; return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }).format(v); };
   var pct = function (v) { return (v > 0.0005 ? "+" : v < -0.0005 ? "−" : "") + num(Math.abs(v), 1) + "%"; };
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
@@ -23,7 +22,7 @@
 
   /* ---------- Leitura e validação (regras em validacao.js) ---------- */
   var V = window.Validacao;
-  var ORDEM_CAMPOS = ["funcionarios", "salario", "encargos", "horas", "adicional", "dias", "equipeMinima", "promulgacao"];
+  var ORDEM_CAMPOS = ["funcionarios", "horas", "dias", "equipeMinima", "promulgacao"];
   var estado = { tentou: false, confirmados: {} }; // confirmados[id] = texto do aviso confirmado
 
   function hojeISO() {
@@ -34,7 +33,7 @@
   function coletar() {
     var f = $("#form");
     return {
-      funcionarios: f.funcionarios.value, salario: f.salario.value, encargos: f.encargos.value, adicional: f.adicional.value,
+      funcionarios: f.funcionarios.value,
       horas: Number(f.horas.value), escalaAtual: Number(f.escalaAtual.value), equipeMinima: f.equipeMinima.value, promulgacao: f.promulgacao.value,
       dias: Array.prototype.map.call(f.querySelectorAll('input[name="dias"]:checked'), function (c) { return Number(c.value); }),
     };
@@ -107,9 +106,9 @@
     var fim = imp.etapas[imp.etapas.length - 1];
     var cartoes = "";
     if (fim.mudou) {
-      cartoes += cartao("Valor da hora de trabalho", pct(fim.variacaoValorHoraPct), "de " + brl(imp.hoje.valorHora) + " para " + brl(fim.valorHora) + ", com o mesmo salário", "alerta");
-      cartoes += cartao("Horas a menos por semana", num(fim.horasPerdidasSemana) + " h", "equipe toda: " + num(imp.hoje.horasEquipeSemana) + " h → " + num(fim.horasEquipeSemana) + " h (" + pct(-fim.horasPerdidasPct) + ")");
-      cartoes += cartao("Para repor essas horas contratando", fim.pessoasParaRepor + " " + plural(fim.pessoasParaRepor, "pessoa", "pessoas"), "cerca de " + brl(fim.custoReposicaoMes) + " a mais por mês", "alerta");
+      cartoes += cartao("Horas a menos por semana", num(fim.horasPerdidasSemana) + " h", "equipe toda: " + num(imp.hoje.horasEquipeSemana) + " h → " + num(fim.horasEquipeSemana) + " h (" + pct(-fim.horasPerdidasPct) + ")", "alerta");
+      cartoes += cartao("Para repor essas horas contratando", fim.pessoasParaRepor + " " + plural(fim.pessoasParaRepor, "pessoa", "pessoas"), "para manter as " + num(imp.hoje.horasEquipeSemana) + " h semanais de trabalho da equipe", "alerta");
+      cartoes += cartao("Ou com hora extra", num(fim.horaExtraSemanaPorPessoa, 1) + " h por semana", "por pessoa, cerca de " + num(fim.horaExtraDiaPorPessoa, 1) + " h a mais por dia (limite de 2 h extras por dia)");
     } else {
       cartoes += cartao("Sua jornada atual", num(p.horasAtuais) + " h", "já está dentro do limite final de 40 h por semana", "ok");
     }
@@ -120,7 +119,7 @@
       "hoje seriam " + eq.equipeHoje + " (" + (p.diasTrabalhoAtuais === 6 ? "6x1" : "5x2") + "); você tem " + p.funcionarios + (ok ? ": cobre." : ": faltam " + (eq.equipe52 - p.funcionarios) + "."),
       ok ? "ok" : "alerta"
     );
-    return '<section class="bloco"><h2>Resumo</h2><p class="sub">No limite final de 40 horas, com dois dias de descanso por semana e sem redução de salário.</p><div class="cartoes">' + cartoes + "</div></section>";
+    return '<section class="bloco"><h2>Resumo</h2><p class="sub">No limite final de 40 horas, com dois dias de descanso por semana. Só horas, pessoas e dias: nenhum valor em dinheiro é calculado.</p><div class="cartoes">' + cartoes + "</div></section>";
   }
 
   function secaoLinhaDoTempo(p, imp) {
@@ -145,15 +144,16 @@
     }
     var cinza = function (t) { return '<span class="zero">' + t + "</span>"; };
     var corpo =
-      linha("Jornada semanal", "", function (c) { return num(c.horas) + " h"; }) +
-      linha("Valor da hora", "salário ÷ (horas semanais × 5)", function (c) { return brl(c.valorHora); }) +
-      linha("Variação do valor da hora", "mesmo salário, menos horas", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : '<span class="sobe">' + pct(c.variacaoValorHoraPct) + "</span>"; }) +
+      linha("Jornada semanal", "por pessoa", function (c) { return num(c.horas) + " h"; }) +
+      linha("Dias de trabalho e de descanso", "por semana", function (c) { return c.diasTrabalho + " + " + c.descansos; }) +
+      linha("Horas por dia trabalhado", "jornada ÷ dias de trabalho", function (c) { return num(c.horasPorDia, 1) + " h"; }) +
+      linha("Horas por mês", "por pessoa, média de 52 ÷ 12 semanas", function (c) { return num(c.horasMesPorPessoa, 1) + " h"; }) +
       linha("Horas trabalhadas pela equipe", "por semana", function (c) { return num(c.horasEquipeSemana) + " h"; }) +
-      linha("Horas perdidas por semana", "em relação a hoje", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : num(c.horasPerdidasSemana) + " h"; }) +
-      linha("Folha mensal", "sem mudança: o salário não pode cair", function (c) { return brl(c.folhaMensal); }) +
-      linha("Repor as horas contratando", "pessoas a mais e custo mensal", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : c.pessoasParaRepor + " " + plural(c.pessoasParaRepor, "pessoa", "pessoas") + "<br>+ " + brl(c.custoReposicaoMes); }) +
-      linha("Repor as horas com hora extra", "custo mensal; limite legal de 2 h extras por dia", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : "+ " + brl(c.custoHoraExtraMes); });
-    return '<section class="bloco"><h2>Impacto por etapa</h2><p class="sub">Para ' + p.funcionarios + " " + plural(p.funcionarios, "funcionário", "funcionários") + ", salário médio de " + brl(p.salario) + (p.encargosPct ? " e encargos de " + num(p.encargosPct, 1) + "%" : "") +
+      linha("Horas perdidas por semana", "em relação a hoje", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : num(c.horasPerdidasSemana) + " h (" + pct(-c.horasPerdidasPct) + ")"; }) +
+      linha("Horas perdidas por mês", "equipe toda", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : num(c.horasPerdidasMes) + " h"; }) +
+      linha("Repor as horas contratando", "pessoas a mais", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : c.pessoasParaRepor + " " + plural(c.pessoasParaRepor, "pessoa", "pessoas"); }) +
+      linha("Repor as horas com hora extra", "por pessoa; limite legal de 2 h extras por dia", function (c, i) { return i === 0 || !c.mudou ? cinza("—") : num(c.horaExtraSemanaPorPessoa, 1) + " h por semana<br>" + num(c.horaExtraDiaPorPessoa, 1) + " h por dia"; });
+    return '<section class="bloco"><h2>Impacto por etapa</h2><p class="sub">Para ' + p.funcionarios + " " + plural(p.funcionarios, "funcionário", "funcionários") +
       '. Os dois últimos itens são formas alternativas de cobrir as horas que deixam de ser trabalhadas.</p><div class="rolagem"><table><thead><tr>' + cab + "</tr></thead><tbody>" + corpo + "</tbody></table></div></section>";
   }
 
@@ -168,7 +168,7 @@
     } else {
       var faltam = Math.max(0, eq.equipe52 - p.funcionarios);
       avisos += '<p class="aviso alerta"><strong>Atenção:</strong> com ' + p.funcionarios + " " + plural(p.funcionarios, "pessoa", "pessoas") + ", faltaria gente em: " + esc(resumo.diasComFalta.join(", ") || "alguns dias") + ". Para manter " + p.equipeMinima + " presentes em todos os dias abertos seriam necessárias " + eq.equipe52 + " pessoas" +
-        (faltam ? " (" + faltam + " a mais, cerca de " + brl(faltam * p.salario * (1 + p.encargosPct / 100)) + " por mês)" : "") + ".</p>";
+        (faltam ? " (" + faltam + " a mais)" : "") + ".</p>";
     }
     if (resumo.abreNoDomingo && resumo.domingosDeFolgaPorPessoa !== null) {
       avisos += '<p class="sub">Como a empresa abre no domingo, o rodízio dá em média <strong>' + num(resumo.domingosDeFolgaPorPessoa, 1) + "</strong> domingo(s) de folga por pessoa a cada 4 semanas. A regra pede que um dos dois descansos seja, preferencialmente, no domingo.</p>";
@@ -202,10 +202,10 @@
     var fim = imp.etapas[imp.etapas.length - 1];
     var l = [];
     l.push("Simulação do fim da escala 6x1 (" + CFG.marca + ")");
-    l.push(p.funcionarios + " funcionários, salário médio " + brl(p.salario) + ", jornada atual " + p.horasAtuais + " h.");
+    l.push(p.funcionarios + " funcionários, jornada atual " + p.horasAtuais + " h por semana.");
     if (fim.mudou) {
-      l.push("Com 40 h/semana: valor da hora " + pct(fim.variacaoValorHoraPct) + " (" + brl(imp.hoje.valorHora) + " → " + brl(fim.valorHora) + "); " + num(fim.horasPerdidasSemana) + " h a menos por semana na equipe.");
-      l.push("Repor contratando: " + fim.pessoasParaRepor + " pessoa(s), cerca de " + brl(fim.custoReposicaoMes) + " por mês. Repor com hora extra: cerca de " + brl(fim.custoHoraExtraMes) + " por mês.");
+      l.push("Com 40 h/semana: " + num(fim.horasPerdidasSemana) + " h a menos por semana na equipe (" + num(imp.hoje.horasEquipeSemana) + " h → " + num(fim.horasEquipeSemana) + " h).");
+      l.push("Repor contratando: " + fim.pessoasParaRepor + " pessoa(s). Repor com hora extra: " + num(fim.horaExtraSemanaPorPessoa, 1) + " h por semana por pessoa.");
     }
     l.push("Equipe mínima na escala 5x2: " + eq.equipe52 + " pessoa(s) (você tem " + p.funcionarios + ").");
     l.push("Estimativa para planejamento; não substitui análise de RH, contabilidade ou advogado trabalhista.");
@@ -216,8 +216,8 @@
 
   function simular(p, confirmados) {
     var imp = E.simularImpacto({
-      funcionarios: p.funcionarios, salario: p.salario, encargosPct: p.encargosPct, horasAtuais: p.horasAtuais,
-      adicionalExtraPct: p.adicionalExtraPct, promulgacao: p.promulgacao, etapas: CFG.regras.etapas,
+      funcionarios: p.funcionarios, horasAtuais: p.horasAtuais, diasTrabalhoAtuais: p.diasTrabalhoAtuais,
+      promulgacao: p.promulgacao, etapas: CFG.regras.etapas,
     });
     var eq = {
       equipeHoje: E.equipeNecessaria({ diasAbertos: p.diasAbertos, equipeMinima: p.equipeMinima, diasTrabalhoSemana: p.diasTrabalhoAtuais }),
@@ -311,11 +311,8 @@
 
   $("#exemplo").addEventListener("click", function () {
     form.funcionarios.value = "12";
-    form.salario.value = "2.400,00";
-    form.encargos.value = "70";
     form.horas.value = "44";
     form.escalaAtual.value = "6";
-    form.adicional.value = "50";
     form.equipeMinima.value = "3";
     form.promulgacao.value = "";
     Array.prototype.forEach.call(form.querySelectorAll('input[name="dias"]'), function (c) { c.checked = c.value !== "0"; });

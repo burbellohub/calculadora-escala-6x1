@@ -10,7 +10,6 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var brl = function (v) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v); };
   var dec = function (v) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(v); };
   var NOMES_DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
@@ -44,7 +43,7 @@
   var dataBr = function (iso) { return iso.split("-").reverse().join("/"); };
 
   /**
-   * e: { funcionarios, salario, encargos, adicional, horas, escalaAtual, dias:[0..6], equipeMinima, promulgacao }
+   * e: { funcionarios, horas, escalaAtual, dias:[0..6], equipeMinima, promulgacao }
    *    (campos de texto como o usuário digitou; horas/escalaAtual/dias já numéricos)
    * cfg: CONFIG.limites; hojeISO: "AAAA-MM-DD"
    */
@@ -60,32 +59,6 @@
     if (n === null) erro("funcionarios", "Informe quantos funcionários trabalham nesta escala.");
     else if (isNaN(n) || Math.floor(n) !== n || n < 1 || n > cfg.funcionariosMax) erro("funcionarios", "Use um número inteiro de 1 a " + cfg.funcionariosMax + ".");
     else nOk = true;
-
-    var salario = lerNumero(e.salario);
-    var salOk = false;
-    if (salario === null) erro("salario", "Informe o salário médio mensal, por exemplo 2.400,00.");
-    else if (isNaN(salario) || salario <= 0) erro("salario", "Informe um valor maior que zero, por exemplo 2.400,00.");
-    else if (salario > cfg.salarioMaximoAceito) erro("salario", "Esse valor é improvável para um salário médio individual. Confira se não digitou a folha total.");
-    else salOk = true;
-
-    var encargos = lerNumero(e.encargos);
-    if (encargos === null) encargos = 0;
-    if (isNaN(encargos) || encargos < 0 || encargos > 300) erro("encargos", "Use um valor entre 0 e 300 (em %).");
-    else if (encargos > cfg.encargosAvisoAcima) aviso("encargos-altos", "encargos", "Encargos de " + dec(encargos) + "% estão bem acima do usual. Confirme que não digitou o valor em reais ou o fator em vez do percentual.");
-
-    var adicional = lerNumero(e.adicional);
-    if (adicional === null) adicional = cfg.adicionalExtraMinimo;
-    if (isNaN(adicional) || adicional > 300) erro("adicional", "Use um valor entre " + cfg.adicionalExtraMinimo + " e 300 (em %).");
-    else if (adicional < cfg.adicionalExtraMinimo) erro("adicional", "O adicional mínimo de hora extra é de " + cfg.adicionalExtraMinimo + "% (Constituição, art. 7º, XVI).");
-
-    if (nOk && salOk) {
-      var piso = cfg.salarioMinimo * Math.min(1, e.horas / 44);
-      if (salario < piso - 0.005) {
-        aviso("salario-minimo", "salario", "O salário médio de " + brl(salario) + " está abaixo do salário mínimo nacional" + (e.horas < 44 ? " proporcional à jornada de " + e.horas + " h" : "") + " (" + brl(piso) + "). Confirme se o valor está correto.");
-      } else if (salario > cfg.salarioAvisoAcima) {
-        aviso("salario-alto", "salario", "O salário médio de " + brl(salario) + " é muito acima do usual. Confirme que é o salário médio de UMA pessoa, e não a folha total.");
-      }
-    }
 
     /* ---- Funcionamento ---- */
     var abertos = (e.dias || []).filter(function (d, i, a) { return a.indexOf(d) === i; });
@@ -133,7 +106,7 @@
       erros: [],
       avisos: avisos,
       dados: {
-        funcionarios: n, salario: salario, encargosPct: encargos, adicionalExtraPct: adicional,
+        funcionarios: n,
         horasAtuais: e.horas, diasTrabalhoAtuais: e.escalaAtual, diasAbertos: abertos,
         equipeMinima: m, promulgacao: promulgacao,
       },

@@ -12,11 +12,6 @@
   const SEMANAS_NO_MES = 52 / 12;
   const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-  /** Valor da hora pelo divisor usual da CLT: horas semanais × 5 (44 h → 220; 40 h → 200). */
-  function valorHora(salario, horasSemanais) {
-    return salario / (horasSemanais * 5);
-  }
-
   /** Soma meses a uma data "AAAA-MM-DD" (mantém o dia; se não existir no mês, usa o último). */
   function adicionarMeses(iso, meses) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
@@ -30,60 +25,47 @@
   }
 
   /**
-   * Impacto financeiro de cada etapa da redução de jornada.
-   * p: { funcionarios, salario, encargosPct, horasAtuais, adicionalExtraPct, promulgacao, etapas }
+   * Impacto em HORAS de cada etapa da redução de jornada (sem valores em dinheiro).
+   * p: { funcionarios, horasAtuais, diasTrabalhoAtuais, promulgacao, etapas }
    * etapas: [{ id, rotulo, horas, meses }] (as etapas FUTURAS, em ordem)
+   * Nas etapas novas a escala é 5x2: 5 dias de trabalho e 2 de descanso.
    */
   function simularImpacto(p) {
     const n = p.funcionarios;
-    const enc = 1 + (p.encargosPct || 0) / 100;
-    const extra = 1 + (p.adicionalExtraPct ?? 50) / 100;
     const H0 = p.horasAtuais;
-    const vh0 = valorHora(p.salario, H0);
-    const folha = n * p.salario * enc;
+    const diasHoje = p.diasTrabalhoAtuais;
 
-    const hoje = {
-      id: "hoje",
-      rotulo: "Hoje",
-      horas: H0,
-      valorHora: vh0,
-      folhaMensal: folha,
-      horasEquipeSemana: n * H0,
-      variacaoValorHoraPct: 0,
-      horasPerdidasSemana: 0,
-      pessoasParaRepor: 0,
-      custoReposicaoMes: 0,
-      custoHoraExtraMes: 0,
-      data: null,
-      mudou: false,
-    };
-
-    const etapas = p.etapas.map((e) => {
-      const H = Math.min(e.horas, H0);
+    function etapa(id, rotulo, H, dias, descansos, data) {
       const mudou = H < H0;
-      const vh = valorHora(p.salario, H);
       const perdidasSemana = n * (H0 - H);
       // Arredonda a "sobra" de ponto flutuante antes do teto (ex.: 10 × (44/40 − 1) = 1,0000000000000009).
       const pessoas = mudou ? Math.ceil(Math.round(n * (H0 / H - 1) * 1e6) / 1e6) : 0;
       return {
-        id: e.id,
-        rotulo: e.rotulo,
+        id: id,
+        rotulo: rotulo,
         horas: H,
-        mudou,
-        valorHora: vh,
-        variacaoValorHoraPct: (vh / vh0 - 1) * 100,
-        folhaMensal: folha,
+        mudou: mudou,
+        data: data,
+        diasTrabalho: dias,
+        descansos: descansos,
+        horasPorDia: H / dias,
+        horasMesPorPessoa: H * SEMANAS_NO_MES,
         horasEquipeSemana: n * H,
         horasPerdidasSemana: perdidasSemana,
+        horasPerdidasMes: perdidasSemana * SEMANAS_NO_MES,
         horasPerdidasPct: (1 - H / H0) * 100,
         pessoasParaRepor: pessoas,
-        custoReposicaoMes: pessoas * p.salario * enc,
-        custoHoraExtraMes: perdidasSemana * SEMANAS_NO_MES * vh * extra * enc,
-        data: p.promulgacao ? adicionarMeses(p.promulgacao, e.meses) : null,
+        // Alternativa: cada pessoa cobre as horas perdidas com hora extra.
+        horaExtraSemanaPorPessoa: H0 - H,
+        horaExtraDiaPorPessoa: (H0 - H) / dias,
       };
-    });
+    }
 
-    return { hoje, etapas };
+    const hoje = etapa("hoje", "Hoje", H0, diasHoje, 7 - diasHoje, null);
+    const etapas = p.etapas.map(function (e) {
+      return etapa(e.id, e.rotulo, Math.min(e.horas, H0), 5, 2, p.promulgacao ? adicionarMeses(p.promulgacao, e.meses) : null);
+    });
+    return { hoje: hoje, etapas: etapas };
   }
 
   /** Pessoas necessárias para manter `equipeMinima` presentes em todos os dias abertos. */
@@ -180,5 +162,5 @@
     return base;
   }
 
-  return { SEMANAS_NO_MES, DIAS, valorHora, adicionarMeses, simularImpacto, equipeNecessaria, gerarEscala, menorEquipe5x2 };
+  return { SEMANAS_NO_MES, DIAS, adicionarMeses, simularImpacto, equipeNecessaria, gerarEscala, menorEquipe5x2 };
 });

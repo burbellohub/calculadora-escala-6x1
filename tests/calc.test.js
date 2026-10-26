@@ -7,56 +7,73 @@ const etapas = [
   { id: "e40", rotulo: "40h", meses: 14, horas: 40 },
 ];
 const perto = (a, b, tol = 0.01) => assert.ok(Math.abs(a - b) <= tol, `${a} deveria estar perto de ${b}`);
+const base = (extra = {}) => ({ funcionarios: 10, horasAtuais: 44, diasTrabalhoAtuais: 6, promulgacao: null, etapas, ...extra });
 
-test("valor da hora usa o divisor horas semanais x 5 (220 para 44 h)", () => {
-  perto(E.valorHora(2200, 44), 10);
-  perto(E.valorHora(2000, 40), 10);
-  perto(E.valorHora(2100, 42), 10);
+test("o cálculo não usa nem devolve valores em dinheiro", () => {
+  const r = E.simularImpacto(base());
+  const todas = JSON.stringify(r).toLowerCase();
+  for (const proibida of ["valorhora", "folha", "custo", "salario", "brl"]) assert.ok(!todas.includes(proibida), proibida);
+  assert.equal(typeof E.valorHora, "undefined");
 });
 
-test("impacto: 10 pessoas, R$ 2.000, 44h -> 42h e 40h", () => {
-  const r = E.simularImpacto({ funcionarios: 10, salario: 2000, encargosPct: 0, horasAtuais: 44, adicionalExtraPct: 50, etapas });
-  perto(r.hoje.valorHora, 9.0909, 0.001);
-  perto(r.hoje.folhaMensal, 20000);
+test("impacto em horas: 10 pessoas, 44h -> 42h e 40h", () => {
+  const r = E.simularImpacto(base());
+
+  assert.equal(r.hoje.horas, 44);
+  perto(r.hoje.horasPorDia, 7.3333, 0.001); // 44 h em 6 dias
+  assert.equal(r.hoje.descansos, 1);
+  assert.equal(r.hoje.horasEquipeSemana, 440);
 
   const [e42, e40] = r.etapas;
-  perto(e42.valorHora, 9.5238, 0.001);
-  perto(e42.variacaoValorHoraPct, 4.76, 0.01);
+  assert.equal(e42.horas, 42);
+  assert.equal(e42.descansos, 2);
+  perto(e42.horasPorDia, 8.4, 0.001); // 42 h em 5 dias: acima de 8 h/dia
+  assert.equal(e42.horasEquipeSemana, 420);
   assert.equal(e42.horasPerdidasSemana, 20);
+  perto(e42.horasPerdidasPct, 4.545, 0.001);
   assert.equal(e42.pessoasParaRepor, 1); // 10 x (44/42 - 1) = 0,48 -> 1 pessoa
+  assert.equal(e42.horaExtraSemanaPorPessoa, 2);
+  perto(e42.horaExtraDiaPorPessoa, 0.4, 0.001);
 
-  perto(e40.valorHora, 10, 0.001);
-  perto(e40.variacaoValorHoraPct, 10, 0.001);
+  assert.equal(e40.horas, 40);
+  perto(e40.horasPorDia, 8, 0.001);
   assert.equal(e40.horasPerdidasSemana, 40);
+  perto(e40.horasPerdidasMes, 40 * (52 / 12), 0.001);
+  perto(e40.horasMesPorPessoa, 40 * (52 / 12), 0.001);
   assert.equal(e40.pessoasParaRepor, 1); // 10 x 0,1 = 1,0 exato, sem arredondar para 2
-  perto(e40.custoReposicaoMes, 2000);
-  // 40 h/semana x 4,333 sem x R$ 10 x 1,5 = R$ 2.600
-  perto(e40.custoHoraExtraMes, 2600);
-  perto(e40.folhaMensal, 20000, 0.001);
+  assert.equal(e40.horaExtraSemanaPorPessoa, 4);
+  perto(e40.horaExtraDiaPorPessoa, 0.8, 0.001);
 });
 
-test("encargos aumentam o custo de reposição e de hora extra", () => {
-  const r = E.simularImpacto({ funcionarios: 10, salario: 2000, encargosPct: 50, horasAtuais: 44, adicionalExtraPct: 50, etapas });
-  perto(r.hoje.folhaMensal, 30000);
-  perto(r.etapas[1].custoReposicaoMes, 3000);
-  perto(r.etapas[1].custoHoraExtraMes, 3900);
+test("12 pessoas: repor 44 -> 40 h exige 2 pessoas (1,2 arredondado para cima)", () => {
+  const r = E.simularImpacto(base({ funcionarios: 12 }));
+  assert.equal(r.etapas[1].pessoasParaRepor, 2);
+  assert.equal(r.etapas[1].horasPerdidasSemana, 48);
 });
 
-test("quem já trabalha 40 h não tem impacto", () => {
-  const r = E.simularImpacto({ funcionarios: 5, salario: 3000, encargosPct: 0, horasAtuais: 40, adicionalExtraPct: 50, etapas });
+test("quem já trabalha 40 h não perde horas", () => {
+  const r = E.simularImpacto(base({ funcionarios: 5, horasAtuais: 40 }));
   for (const e of r.etapas) {
     assert.equal(e.mudou, false);
     assert.equal(e.pessoasParaRepor, 0);
     assert.equal(e.horasPerdidasSemana, 0);
-    perto(e.variacaoValorHoraPct, 0, 0.0001);
-    perto(e.custoHoraExtraMes, 0, 0.0001);
+    assert.equal(e.horaExtraSemanaPorPessoa, 0);
+    assert.equal(e.horas, 40);
   }
 });
 
-test("datas das etapas a partir da promulgação", () => {
-  const r = E.simularImpacto({ funcionarios: 1, salario: 1000, encargosPct: 0, horasAtuais: 44, adicionalExtraPct: 50, promulgacao: "2026-12-15", etapas });
+test("já em 5x2 com 44 h: hoje tem 5 dias de trabalho e 2 de descanso", () => {
+  const r = E.simularImpacto(base({ diasTrabalhoAtuais: 5 }));
+  assert.equal(r.hoje.diasTrabalho, 5);
+  assert.equal(r.hoje.descansos, 2);
+  perto(r.hoje.horasPorDia, 8.8, 0.001);
+});
+
+test("datas das etapas a partir da publicação", () => {
+  const r = E.simularImpacto(base({ funcionarios: 1, promulgacao: "2026-12-15" }));
   assert.equal(r.etapas[0].data, "2027-02-15");
   assert.equal(r.etapas[1].data, "2028-02-15");
+  assert.equal(E.simularImpacto(base()).etapas[0].data, null);
   assert.equal(E.adicionarMeses("2026-12-31", 2), "2027-02-28"); // dia 31 não existe em fevereiro
   assert.equal(E.adicionarMeses("2028-01-31", 1), "2028-02-29"); // ano bissexto
   assert.equal(E.adicionarMeses("lixo", 2), null);

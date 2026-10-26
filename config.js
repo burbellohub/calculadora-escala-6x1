@@ -13,13 +13,6 @@ window.CONFIG = {
   /** Limites usados para barrar dados errados ou fora do padrão. */
   limites: {
     funcionariosMax: 5000,
-    /** Salário mínimo nacional de 2026: R$ 1.621,00 (Decreto 12.797/2025, vigente desde 01/01/2026). Atualize todo ano. */
-    salarioMinimo: 1621,
-    salarioMaximoAceito: 500000,
-    salarioAvisoAcima: 25000,
-    encargosAvisoAcima: 120,
-    /** Adicional mínimo de hora extra: 50% (CF, art. 7º, XVI). */
-    adicionalExtraMinimo: 50,
     /** Limite diário normal (8 h) e máximo com compensação (10 h: 8 + 2 extras, CLT art. 59). */
     jornadaDiariaPadrao: 8,
     jornadaDiariaMaxima: 10,
@@ -60,7 +53,7 @@ window.CONFIG = {
       "Acordo ou convenção coletiva pode ter regras próprias (por exemplo, compensação na média de dois descansos por semana e jornada diária maior durante a transição).",
       "Empregados com nível superior e remuneração a partir de 2,5 vezes o teto do INSS têm tratamento diferente na jornada.",
       "Regimes e setores com jornada especial (turnos, plantões) podem depender de lei específica.",
-      "Hora extra, banco de horas, reflexos em DSR, férias e 13º não estão calculados em detalhe.",
+      "Banco de horas, compensações e a forma de pagar hora extra não são calculados: a simulação mostra só horas, pessoas e dias.",
     ],
 
     fontes: [
