@@ -16,7 +16,7 @@
     { nome: "mulher, segunda a sexta, 8 h por dia (40 h)", sexo: "m", dias: [D8, D8, D8, D8, D8, null, null] },
     { nome: "homem, 9 h de segunda a quinta e 6 h na sexta (42 h)", sexo: "h", dias: [D9, D9, D9, D9, D6, null, null] },
     { nome: "mulher, terça a sábado, com DSR na segunda e no domingo (42 h)", sexo: "m", dias: [null, D9, D9, D9, D9, D6S, null] },
-    { nome: "mulher que trabalha no domingo e folga 1 domingo a cada 2 semanas (42 h)", sexo: "m", domingo: "2", dias: [D824, null, D824, D824, null, D824, D824] },
+    { nome: "mulher que trabalha no domingo e folga 1 domingo sim e 1 não (42 h)", sexo: "m", domingo: "2", dias: [D824, null, D824, D824, null, D824, D824] },
     { nome: "homem que trabalha no domingo e folga 1 domingo a cada 4 semanas (42 h)", sexo: "h", domingo: "4", dias: [D824, D824, null, D824, null, D824, D824] },
   ];
   var exemploAtual = 0;
@@ -38,6 +38,25 @@
 
   var tocou = false; // só mostra erros depois que a pessoa mexe no formulário
 
+  /** Mulher: pergunta única (domingo sim, domingo não). Homem: de quantas em quantas semanas folga. */
+  var opcoesDomingo = "";
+
+  function ajustarPerguntaDomingo() {
+    var m = $("#sexo").value === "m";
+    var chave = m ? "m" : "h";
+    if (opcoesDomingo === chave) return;
+    opcoesDomingo = chave;
+    var sel = $("#domingo-cada");
+    var atual = sel.value;
+    $("#rotulo-domingo").textContent = m
+      ? "Como o domingo é dia de trabalho: a escala da mulher alterna 1 domingo trabalhado e 1 domingo de folga (uma semana sim, outra não)?"
+      : "Como o domingo é dia de trabalho: o homem folga um domingo a cada";
+    sel.innerHTML = m
+      ? '<option value="">Escolha...</option><option value="2">Sim, folga 1 domingo sim e 1 não</option><option value="0">Não alterna</option>'
+      : '<option value="">Escolha...</option><option value="2">2 semanas</option><option value="3">3 semanas</option><option value="4">4 semanas</option><option value="5">5 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="0">Nunca folga no domingo</option>';
+    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === atual; }) ? atual : "";
+  }
+
   function lerExtra() {
     return { sexo: $("#sexo").value, domingoACada: $("#domingo-cada").value };
   }
@@ -51,6 +70,7 @@
   function mostrar() {
     var dias = ler();
     $("#bloco-domingo").hidden = dias[6].dsr;
+    ajustarPerguntaDomingo();
     var r = E.avaliar(dias, lerExtra());
 
     dias.forEach(function (d, i) {
@@ -83,8 +103,9 @@
   /** Frase sobre a regra do domingo, para o painel e para a tela final. */
   function textoDomingo(extra, trabalha) {
     var quem = extra.sexo === "m" ? "mulher" : "homem";
-    var regra = extra.sexo === "m" ? "pelo menos 1 domingo de folga a cada 15 dias" : "pelo menos 1 domingo de folga por mês";
+    var regra = extra.sexo === "m" ? "domingo sim, domingo não" : "pelo menos 1 domingo de folga por mês";
     if (!trabalha) return "Domingo é dia de DSR: a regra do domingo (" + quem + ": " + regra + ") está cumprida.";
+    if (extra.sexo === "m") return "Domingo é dia de trabalho, com folga 1 domingo sim e 1 não: cumpre a regra da mulher (1 semana sim, 1 semana não).";
     return "Domingo é dia de trabalho, com folga num domingo a cada " + extra.domingoACada + " semanas: cumpre a regra (" + quem + ": " + regra + ").";
   }
 
@@ -159,6 +180,7 @@
     var ex = EXEMPLOS[exemploAtual];
     $("#nome-exemplo").textContent = "Exemplo " + (exemploAtual + 1) + " de " + EXEMPLOS.length + ": " + ex.nome + ".";
     $("#sexo").value = ex.sexo;
+    ajustarPerguntaDomingo();
     $("#domingo-cada").value = ex.domingo || "";
     ex.dias.forEach(function (b, i) {
       $("#t" + i).value = b === null ? "d" : "t";

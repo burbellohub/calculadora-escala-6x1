@@ -79,7 +79,7 @@
       if (cada === null || isNaN(cada)) erros.push({ dia: null, campo: "domingo", msg: "O domingo é dia de trabalho: informe de quantas em quantas semanas a pessoa folga num domingo." });
       else if (sexo && (cada === 0 || cada > DOMINGO_LIMITE[sexo])) {
         erros.push({ dia: null, campo: "domingo", msg: sexo === "m"
-          ? "Mulheres precisam folgar pelo menos 1 domingo a cada 15 dias (a cada 2 semanas). " + (cada === 0 ? "Você informou que nunca folga no domingo." : "Você informou a cada " + cada + " semanas.") + " Ajuste a escala."
+          ? "Mulheres precisam folgar 1 domingo sim e 1 não (uma semana sim, outra não, no mínimo 1 domingo a cada 15 dias). " + (cada === 0 ? "Você informou que não há folga alternada no domingo." : "Você informou folga a cada " + cada + " semanas.") + " Ajuste a escala."
           : "Homens precisam folgar pelo menos 1 domingo por mês (a cada 4 semanas). " + (cada === 0 ? "Você informou que nunca folga no domingo." : "Você informou a cada " + cada + " semanas.") + " Ajuste a escala." });
       }
     }
