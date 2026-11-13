@@ -32,6 +32,43 @@ test("horas do dia = (2ª - 1ª) + (4ª - 3ª)", () => {
   assert.equal(r.situacao, "ok");
 });
 
+test("turno noturno 21:00, 00:00, 01:00, 06:00 passa da meia-noite e dá 8 h (não zera)", () => {
+  const n = () => dia("21:00", "00:00", "01:00", "06:00");
+  const r = av(semana(n(), n(), n(), n(), n(), folga(), folga()));
+  assert.equal(r.porDia[0], 480);
+  assert.equal(r.viraDia[0], true);
+  assert.equal(r.totalMin, 40 * 60);
+  assert.equal(r.situacao, "ok");
+});
+
+test("outros turnos que viram a meia-noite: virada na 2ª, na 3ª ou na 4ª batida", () => {
+  const cenarios = [
+    [dia("22:00", "02:00", "03:00", "07:00"), 480], // vira entre a 1ª e a 2ª
+    [dia("18:00", "23:00", "00:00", "03:00"), 480], // vira entre a 2ª e a 3ª (intervalo na meia-noite)
+    [dia("20:00", "23:30", "00:30", "04:30"), 450], // 3 h 30 + 4 h = 7 h 30
+    [dia("14:00", "18:00", "19:00", "23:00"), 480], // não vira
+  ];
+  cenarios.forEach(([d, esperado], k) => {
+    const r = av(semana(d, folga(), folga(), folga(), folga(), folga(), folga()));
+    assert.equal(r.porDia[0], esperado, String(k));
+  });
+  assert.equal(av(semana(dia("22:00", "02:00", "03:00", "07:00"), folga(), folga(), folga(), folga(), folga(), folga())).viraDia[0], true);
+  assert.equal(av(semana(dia("14:00", "18:00", "19:00", "23:00"), folga(), folga(), folga(), folga(), folga(), folga())).viraDia[0], false);
+});
+
+test("virar a meia-noite não esconde erro: batida repetida, trecho de mais de 12 h ou turno de mais de 24 h", () => {
+  const casos = [
+    dia("08:00", "08:00", "13:00", "17:00"), // batida repetida
+    dia("08:00", "12:00", "11:00", "17:00"), // 3ª antes da 2ª (viraria 23 h de intervalo)
+    dia("08:00", "12:00", "13:00", "07:00"), // 4ª "no dia seguinte" daria 18 h de trabalho
+  ];
+  casos.forEach((c, k) => {
+    const r = av(semana(c, oito(), oito(), oito(), oito(), folga(), folga()));
+    assert.equal(r.situacao, "erro", String(k));
+    assert.equal(r.erros[0].dia, 0, String(k));
+  });
+});
+
 test("6x1 de 44 h com só 1 DSR: erro de DSR", () => {
   const r = av(semana(oito(), oito(), oito(), oito(), oito(), sabado4(), folga()));
   assert.equal(r.dsr, 1);

@@ -11,6 +11,7 @@
   var D9 = ["08:00", "12:00", "13:00", "18:00"]; // 9 h
   var D6 = ["08:00", "12:00", "13:00", "15:00"]; // 6 h
   var D6S = ["08:00", "12:00", "12:15", "14:15"]; // 6 h, intervalo curto
+  var DN = ["21:00", "00:00", "01:00", "06:00"]; // turno noturno, 8 h (3 h antes e 5 h depois da meia-noite)
   var EXEMPLOS = [
     { nome: "homem, segunda a sexta, 8 h 24 por dia (42 h)", sexo: "h", dias: [D824, D824, D824, D824, D824, null, null] },
     { nome: "mulher, segunda a sexta, 8 h por dia (40 h)", sexo: "m", dias: [D8, D8, D8, D8, D8, null, null] },
@@ -18,6 +19,7 @@
     { nome: "mulher, terça a sábado, com DSR na segunda e no domingo (42 h)", sexo: "m", dias: [null, D9, D9, D9, D9, D6S, null] },
     { nome: "mulher que trabalha no domingo e folga 1 domingo sim e 1 não (42 h)", sexo: "m", domingo: "2", dias: [D824, null, D824, D824, null, D824, D824] },
     { nome: "homem que trabalha no domingo e folga 1 domingo a cada 4 semanas (42 h)", sexo: "h", domingo: "4", dias: [D824, D824, null, D824, null, D824, D824] },
+    { nome: "homem, turno noturno de segunda a sexta: 21h às 00h e 01h às 06h (40 h)", sexo: "h", dias: [DN, DN, DN, DN, DN, null, null] },
   ];
   var exemploAtual = 0;
 
@@ -78,7 +80,7 @@
       [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).disabled = d.dsr; });
       linha.querySelector(".batidas").hidden = d.dsr;
       $("#c" + i).hidden = d.dsr;
-      $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : "Horas do dia: " + E.formatar(r.porDia[i]);
+      $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : "Horas do dia: " + E.formatar(r.porDia[i]) + (r.viraDia[i] ? " · passa da meia-noite (termina no dia seguinte)" : "");
       linha.classList.toggle("dsr", d.dsr);
       linha.classList.toggle("problema", tocou && r.erros.some(function (e) { return e.dia === i; }));
     });
@@ -161,7 +163,7 @@
     var linhas = dias.map(function (d, i) {
       return d.dsr
         ? '<tr class="dsr"><td>' + E.NOMES[i] + '</td><td>DSR</td><td class="n">—</td></tr>'
-        : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + '</td><td class="n">' + esc(E.formatar(r.porDia[i])) + "</td></tr>";
+        : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + (r.viraDia[i] ? " (passa da meia-noite)" : "") + '</td><td class="n">' + esc(E.formatar(r.porDia[i])) + "</td></tr>";
     }).join("");
     var el = $("#final");
     var lei = extra.sexo === "m" ? textoLei() : "";

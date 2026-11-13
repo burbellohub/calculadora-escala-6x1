@@ -26,6 +26,27 @@
     return +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : NaN;
   }
 
+  var DIA_MIN = 24 * 60;
+  // Nenhum trecho (jornada ou intervalo) passa de 12 h: acima disso quase sempre é erro de digitação.
+  var TRECHO_MAX = 12 * 60;
+
+  /**
+   * Põe as 4 batidas em linha do tempo contínua, contadas desde 00:00 do dia em que o turno começa.
+   * Batida menor que a anterior = já passou da meia-noite (soma 24 h): 21:00, 00:00, 01:00, 06:00 vira
+   * 1260, 1440, 1500, 1800. Devolve null se algum trecho ficar parado ou longo demais ou se o turno
+   * inteiro passar de 24 h, que é erro de digitação.
+   */
+  function linhaDoTempo(b) {
+    var t = [b[0]];
+    for (var k = 1; k < 4; k++) {
+      var v = b[k];
+      while (v <= t[k - 1]) v += DIA_MIN;
+      if (v - t[k - 1] > TRECHO_MAX) return null;
+      t.push(v);
+    }
+    return t[3] - t[0] < DIA_MIN ? t : null;
+  }
+
   /** 2520 -> "42 h"; 2490 -> "41 h 30 min". */
   function formatar(min) {
     var h = Math.floor(min / 60);
@@ -45,10 +66,12 @@
     var erros = [];
     var total = 0;
     var porDia = [];
+    var viraDia = []; // true quando o turno termina depois da meia-noite (dia seguinte)
     var dsr = dias.filter(function (d) { return d.dsr; }).length;
 
     dias.forEach(function (d, i) {
       porDia.push(null);
+      viraDia.push(false);
       if (d.dsr) return;
       var b = (d.batidas || []).map(lerHora);
       while (b.length < 4) b.push(null);
@@ -58,11 +81,13 @@
         erros.push({ dia: i, msg: nome + ": horário inválido. Use o formato 08:00." });
       } else if (faltam) {
         erros.push({ dia: i, msg: nome + ": preencha as 4 batidas ou marque como DSR." });
-      } else if (!(b[0] < b[1] && b[1] < b[2] && b[2] < b[3])) {
-        erros.push({ dia: i, msg: nome + ": os horários precisam estar em ordem (1ª, 2ª, 3ª e 4ª batida, uma depois da outra)." });
+      } else if (!linhaDoTempo(b)) {
+        erros.push({ dia: i, msg: nome + ": os horários não fecham. Confira a ordem das 4 batidas (1ª, 2ª, 3ª e 4ª, uma depois da outra; passar da meia-noite é aceito) e se nenhum trecho passa de 12 h." });
       } else {
-        var min = (b[1] - b[0]) + (b[3] - b[2]);
+        var t = linhaDoTempo(b);
+        var min = (t[1] - t[0]) + (t[3] - t[2]);
         porDia[i] = min;
+        viraDia[i] = t[3] >= DIA_MIN;
         if (min > LIMITE_DIA) erros.push({ dia: i, msg: nome + ": " + formatar(min) + " passa do máximo de " + formatar(LIMITE_DIA) + " por dia." });
         else total += min;
       }
@@ -86,7 +111,7 @@
 
     var excede = Math.max(0, total - LIMITE_SEMANA);
     var situacao = erros.length ? "erro" : excede ? "excede" : "ok";
-    return { erros: erros, totalMin: total, porDia: porDia, dsr: dsr, excedeMin: excede, situacao: situacao, domingoTrabalha: !dias[DOMINGO].dsr };
+    return { erros: erros, totalMin: total, porDia: porDia, viraDia: viraDia, dsr: dsr, excedeMin: excede, situacao: situacao, domingoTrabalha: !dias[DOMINGO].dsr };
   }
 
   return { NOMES: NOMES, BATIDAS: BATIDAS, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, DOMINGO_LIMITE: DOMINGO_LIMITE, lerHora: lerHora, formatar: formatar, avaliar: avaliar };
