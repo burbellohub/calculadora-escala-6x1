@@ -11,7 +11,7 @@
   var D9 = ["08:00", "12:00", "13:00", "18:00"]; // 9 h
   var D6 = ["08:00", "12:00", "13:00", "15:00"]; // 6 h
   var D6S = ["08:00", "12:00", "12:15", "14:15"]; // 6 h, intervalo curto
-  var DN = ["21:00", "00:00", "01:00", "06:00"]; // turno noturno, 8 h (3 h antes e 5 h depois da meia-noite)
+  var DN = ["21:00", "00:00", "01:00", "05:00"]; // turno que passa da meia-noite: 3 h antes e 4 h depois
   var EXEMPLOS = [
     { nome: "homem, segunda a sexta, 8 h 24 por dia (42 h)", sexo: "h", dias: [D824, D824, D824, D824, D824, null, null] },
     { nome: "mulher, segunda a sexta, 8 h por dia (40 h)", sexo: "m", dias: [D8, D8, D8, D8, D8, null, null] },
@@ -19,7 +19,8 @@
     { nome: "mulher, terça a sábado, com DSR na segunda e no domingo (42 h)", sexo: "m", dias: [null, D9, D9, D9, D9, D6S, null] },
     { nome: "mulher que trabalha no domingo e folga 1 domingo sim e 1 não (42 h)", sexo: "m", domingo: "2", dias: [D824, null, D824, D824, null, D824, D824] },
     { nome: "homem que trabalha no domingo e folga 1 domingo a cada 4 semanas (42 h)", sexo: "h", domingo: "4", dias: [D824, D824, null, D824, null, D824, D824] },
-    { nome: "homem, turno noturno de segunda a sexta: 21h às 00h e 01h às 06h (40 h)", sexo: "h", dias: [DN, DN, DN, DN, DN, null, null] },
+    // 21h-00h e 01h-05h: 7 h de relógio, 6 h dentro de 22h-5h (contam 6 h 51 min), dia = 7 h 51 min; 5 dias = 39 h 15 min.
+    { nome: "homem, jornada mista, cinco noites de 21h às 00h e 01h às 05h (39 h 15 min com a hora noturna reduzida)", sexo: "h", jornada: "m", dias: [DN, DN, DN, DN, DN, null, null] },
   ];
   var exemploAtual = 0;
 
@@ -60,7 +61,16 @@
   }
 
   function lerExtra() {
-    return { sexo: $("#sexo").value, domingoACada: $("#domingo-cada").value };
+    var j = document.querySelector('input[name="jornada"]:checked');
+    return { sexo: $("#sexo").value, domingoACada: $("#domingo-cada").value, jornada: j ? j.value : "" };
+  }
+
+  /** Linha de horas do dia: relógio, parte noturna (22h às 5h) e o quanto o dia conta com a hora reduzida. */
+  function textoDia(r, i) {
+    var s = "Horas do dia: " + E.formatar(r.porDia[i]);
+    if (r.porDiaNoturno[i] > 0) s += " · no período noturno (22h às 5h): " + E.formatar(r.porDiaNoturno[i]) + " · com a hora reduzida o dia conta " + E.formatar(r.porDiaComputado[i]);
+    if (r.viraDia[i]) s += " · passa da meia-noite (termina no dia seguinte)";
+    return s;
   }
 
   function ler() {
@@ -80,12 +90,14 @@
       [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).disabled = d.dsr; });
       linha.querySelector(".batidas").hidden = d.dsr;
       $("#c" + i).hidden = d.dsr;
-      $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : "Horas do dia: " + E.formatar(r.porDia[i]) + (r.viraDia[i] ? " · passa da meia-noite (termina no dia seguinte)" : "");
+      $("#r" + i).textContent = d.dsr ? "DSR: dia de descanso." : r.porDia[i] === null ? "" : textoDia(r, i);
       linha.classList.toggle("dsr", d.dsr);
       linha.classList.toggle("problema", tocou && r.erros.some(function (e) { return e.dia === i; }));
     });
 
-    var html = '<div class="total">Total da semana: <strong>' + esc(E.formatar(r.totalMin)) + "</strong> (limite: " + esc(E.formatar(E.LIMITE_SEMANA)) + "). Dias de DSR: <strong>" + r.dsr + "</strong> de 2.</div>";
+    var html = '<div class="total">Total da semana: <strong>' + esc(E.formatar(r.totalComputadoMin)) + "</strong> (limite: " + esc(E.formatar(E.LIMITE_SEMANA)) + "). Dias de DSR: <strong>" + r.dsr + "</strong> de 2." +
+      (r.totalNoturnoMin > 0 ? '<span class="sub-total">Contado com a hora noturna reduzida de 52 min 30 s (22h às 5h). Em relógio: ' + esc(E.formatar(r.totalMin)) + ", sendo " + esc(E.formatar(r.totalNoturnoMin)) + " no período noturno.</span>" : "") +
+      "</div>";
 
     if (!tocou) {
       html = '<div class="msg aviso"><p>Preencha as 4 batidas de cada dia de trabalho e marque os 2 dias de DSR. A conferência aparece aqui.</p></div>';
@@ -163,14 +175,15 @@
     var linhas = dias.map(function (d, i) {
       return d.dsr
         ? '<tr class="dsr"><td>' + E.NOMES[i] + '</td><td>DSR</td><td class="n">—</td></tr>'
-        : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + (r.viraDia[i] ? " (passa da meia-noite)" : "") + '</td><td class="n">' + esc(E.formatar(r.porDia[i])) + "</td></tr>";
+        : "<tr><td>" + E.NOMES[i] + "</td><td>" + d.batidas.map(esc).join(" · ") + (r.viraDia[i] ? " (passa da meia-noite)" : "") + '</td><td class="n">' + esc(E.formatar(r.porDiaComputado[i])) + (r.porDiaNoturno[i] > 0 ? " (relógio " + esc(E.formatar(r.porDia[i])) + ")" : "") + "</td></tr>";
     }).join("");
     var el = $("#final");
     var lei = extra.sexo === "m" ? textoLei() : "";
     el.innerHTML = '<div class="cabeca-final"><img class="logo-final" src="logo.png" alt="Burbello Escritório Contábil" width="150" height="99"><div><h2>Escala conferida</h2><p class="sub-final">Burbello Escritório Contábil · Departamento de RH · ' + esc(dataHoje()) + "</p></div></div>" +
       "<p><strong>Funcionário(a): " + (extra.sexo === "m" ? "Mulher" : "Homem") + "</strong></p>" +
+      "<p><strong>Jornada: " + esc(E.JORNADAS[extra.jornada]) + "</strong>" + (r.totalNoturnoMin > 0 ? " (período noturno das 22h às 5h contado com a hora reduzida de 52 min 30 s)" : "") + "</p>" +
       "<p>Dentro de " + esc(E.formatar(E.LIMITE_SEMANA)) + " por semana, com 2 dias de DSR. " + esc(textoDomingo(extra, r.domingoTrabalha)) + "</p>" +
-      '<table><thead><tr><th>Dia</th><th>Batidas</th><th class="n">Horas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td colspan="2">Total da semana</td><td class="n">' + esc(E.formatar(r.totalMin)) + "</td></tr></tfoot></table>" +
+      '<table><thead><tr><th>Dia</th><th>Batidas</th><th class="n">Horas contadas</th></tr></thead><tbody>' + linhas + '</tbody><tfoot><tr><td colspan="2">Total da semana</td><td class="n">' + esc(E.formatar(r.totalComputadoMin)) + (r.totalNoturnoMin > 0 ? " (relógio " + esc(E.formatar(r.totalMin)) + ")" : "") + "</td></tr></tfoot></table>" +
       lei + '<div class="acoes"><button type="button" class="btn primario" id="imprimir">Imprimir ou salvar em PDF</button></div>';
     el.hidden = false;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -192,11 +205,17 @@
     mostrar();
   });
 
+  /** Marca o tipo de jornada ("d", "m", "n"); vazio desmarca todos. */
+  function marcarJornada(valor) {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="jornada"]'), function (r) { r.checked = r.value === valor; });
+  }
+
   function preencherExemplo() {
     tocou = true;
     var ex = EXEMPLOS[exemploAtual];
     $("#nome-exemplo").textContent = "Exemplo " + (exemploAtual + 1) + " de " + EXEMPLOS.length + ": " + ex.nome + ".";
     $("#sexo").value = ex.sexo;
+    marcarJornada(ex.jornada || "d");
     ajustarPerguntaDomingo();
     $("#domingo-cada").value = ex.domingo || "";
     ex.dias.forEach(function (b, i) {
@@ -217,6 +236,7 @@
     tocou = false;
     $("#nome-exemplo").textContent = "";
     $("#sexo").value = "";
+    marcarJornada("");
     $("#domingo-cada").value = "";
     E.NOMES.forEach(function (_, i) { $("#t" + i).value = "t"; [0, 1, 2, 3].forEach(function (k) { $("#b" + i + k).value = ""; }); });
     esconderFinal();

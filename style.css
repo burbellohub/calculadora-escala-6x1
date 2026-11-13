@@ -80,6 +80,12 @@ legend { font-weight: 800; padding: 0 8px; }
 .dia label { display: block; font-size: 0.8rem; color: var(--suave); margin-bottom: 2px; }
 select, input[type="text"], input[type="time"] { width: 100%; min-height: 46px; padding: 0 12px; font: inherit; color: var(--texto); background: var(--cartao); border: 1.5px solid var(--linha); border-radius: 10px; }
 input:disabled { opacity: 0.5; }
+.jornadas { display: grid; gap: 8px; }
+.jornadas label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--cartao); border: 1.5px solid var(--linha); border-radius: 10px; cursor: pointer; }
+.jornadas input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--azul-forte); }
+.jornadas strong { display: block; }
+.jornadas small { display: block; color: var(--suave); font-size: 0.9rem; }
+.jornadas label:has(input:checked) { border-color: var(--azul-forte); background: var(--azul-claro); }
 .campo-linha { max-width: 320px; }
 .campo-linha label, .bloco-domingo label { display: block; font-weight: 600; margin-bottom: 6px; }
 .bloco-domingo { margin-top: 12px; padding: 12px; border: 1px solid var(--linha); border-radius: 10px; background: var(--ambar-claro); }
@@ -92,6 +98,7 @@ input:disabled { opacity: 0.5; }
 .painel { display: grid; gap: 10px; }
 .total { background: var(--cartao); border: 1px solid var(--linha); border-radius: var(--raio); padding: 14px 16px; font-size: 1.15rem; box-shadow: var(--sombra); }
 .total strong { font-size: 1.5rem; }
+.total .sub-total { display: block; margin-top: 4px; font-size: 0.9rem; color: var(--suave); }
 .msg { border-radius: 10px; padding: 12px 14px; border-left: 4px solid; }
 .msg.erro { background: var(--vermelho-claro); border-color: var(--vermelho); }
 .msg.aviso { background: var(--ambar-claro); border-color: #e8a317; }

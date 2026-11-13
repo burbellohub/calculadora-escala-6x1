@@ -47,6 +47,27 @@
     return t[3] - t[0] < DIA_MIN ? t : null;
   }
 
+  // Hora noturna: das 22h às 5h cada hora vale 52 min 30 s (CLT, art. 73, § 1º), ou seja, 8/7 do tempo de relógio; fora disso, 60 min.
+  var JORNADAS = { d: "Diurna", m: "Mista", n: "Noturna" };
+  // Janelas noturnas na linha do tempo do turno (minutos desde 00:00 do dia em que ele começa).
+  var JANELAS_NOTURNAS = [[0, 5 * 60], [22 * 60, 29 * 60], [46 * 60, 53 * 60]];
+
+  /** Minutos de trabalho de relógio (2 trechos: 1ª a 2ª e 3ª a 4ª batida) que caem entre 22h e 5h. */
+  function minutosNoturnos(t) {
+    var soma = 0;
+    [[t[0], t[1]], [t[2], t[3]]].forEach(function (tr) {
+      JANELAS_NOTURNAS.forEach(function (j) {
+        soma += Math.max(0, Math.min(tr[1], j[1]) - Math.max(tr[0], j[0]));
+      });
+    });
+    return soma;
+  }
+
+  /** Minutos noturnos de relógio -> minutos contados com a hora reduzida de 52 min 30 s (arredondado). */
+  function comHoraReduzida(minNoturno) {
+    return Math.round(minNoturno * 8 / 7);
+  }
+
   /** 2520 -> "42 h"; 2490 -> "41 h 30 min". */
   function formatar(min) {
     var h = Math.floor(min / 60);
@@ -64,13 +85,21 @@
   function avaliar(dias, extra) {
     extra = extra || {};
     var erros = [];
-    var total = 0;
-    var porDia = [];
+    var total = 0; // minutos contados com a hora noturna reduzida: é o que vale para os limites de 10 h por dia e 42 h por semana
+    var totalRelogio = 0;
+    var totalNoturno = 0;
+    var porDia = []; // minutos de relógio
+    var porDiaNoturno = []; // minutos de relógio entre 22h e 5h
+    var porDiaComputado = []; // minutos com a hora noturna reduzida
     var viraDia = []; // true quando o turno termina depois da meia-noite (dia seguinte)
     var dsr = dias.filter(function (d) { return d.dsr; }).length;
+    var jornada = JORNADAS[extra.jornada] ? extra.jornada : "";
+    if (!jornada) erros.push({ dia: null, campo: "jornada", msg: "Escolha o tipo de jornada: diurna, mista ou noturna." });
 
     dias.forEach(function (d, i) {
       porDia.push(null);
+      porDiaNoturno.push(null);
+      porDiaComputado.push(null);
       viraDia.push(false);
       if (d.dsr) return;
       var b = (d.batidas || []).map(lerHora);
@@ -86,10 +115,18 @@
       } else {
         var t = linhaDoTempo(b);
         var min = (t[1] - t[0]) + (t[3] - t[2]);
+        var noturno = minutosNoturnos(t);
+        var computado = min - noturno + comHoraReduzida(noturno);
         porDia[i] = min;
+        porDiaNoturno[i] = noturno;
+        porDiaComputado[i] = computado;
         viraDia[i] = t[3] >= DIA_MIN;
-        if (min > LIMITE_DIA) erros.push({ dia: i, msg: nome + ": " + formatar(min) + " passa do máximo de " + formatar(LIMITE_DIA) + " por dia." });
-        else total += min;
+        totalRelogio += min;
+        totalNoturno += noturno;
+        var tipoErro = jornada ? erroDaJornada(jornada, min, noturno) : null;
+        if (tipoErro) erros.push({ dia: i, campo: "jornada", msg: nome + ": " + tipoErro });
+        else if (computado > LIMITE_DIA) erros.push({ dia: i, msg: nome + ": " + formatar(computado) + (noturno ? " (com a hora noturna reduzida)" : "") + " passa do máximo de " + formatar(LIMITE_DIA) + " por dia." });
+        else total += computado;
       }
     });
 
@@ -111,8 +148,27 @@
 
     var excede = Math.max(0, total - LIMITE_SEMANA);
     var situacao = erros.length ? "erro" : excede ? "excede" : "ok";
-    return { erros: erros, totalMin: total, porDia: porDia, viraDia: viraDia, dsr: dsr, excedeMin: excede, situacao: situacao, domingoTrabalha: !dias[DOMINGO].dsr };
+    return {
+      erros: erros, situacao: situacao, dsr: dsr, excedeMin: excede, domingoTrabalha: !dias[DOMINGO].dsr, jornada: jornada,
+      totalMin: totalRelogio, // total de relógio
+      totalComputadoMin: total, // total com a hora noturna reduzida (vale para o limite)
+      totalNoturnoMin: totalNoturno, // minutos de relógio entre 22h e 5h
+      porDia: porDia, porDiaNoturno: porDiaNoturno, porDiaComputado: porDiaComputado, viraDia: viraDia,
+    };
   }
 
-  return { NOMES: NOMES, BATIDAS: BATIDAS, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, DOMINGO_LIMITE: DOMINGO_LIMITE, lerHora: lerHora, formatar: formatar, avaliar: avaliar };
+  /**
+   * Confere se o dia combina com o tipo de jornada escolhido. Diurna: nada entre 22h e 5h.
+   * Mista: começa fora do período noturno e passa por ele (tem horas dentro e fora). Noturna: tudo entre 22h e 5h.
+   */
+  function erroDaJornada(jornada, minRelogio, noturno) {
+    var peri = "22h às 5h";
+    if (jornada === "d" && noturno > 0) return "tem " + formatar(noturno) + " no período noturno (" + peri + "), e a jornada diurna não tem horas nesse período. Escolha Mista ou Noturna.";
+    if (jornada === "n" && noturno < minRelogio) return "tem " + formatar(minRelogio - noturno) + " fora do período noturno (" + peri + "). Na jornada noturna todas as horas ficam entre 22h e 5h; escolha Mista.";
+    if (jornada === "m" && noturno === 0) return "não tem nenhuma hora entre " + peri + ", então a jornada é Diurna.";
+    if (jornada === "m" && noturno === minRelogio) return "todas as horas ficam entre " + peri + ", então a jornada é Noturna.";
+    return null;
+  }
+
+  return { NOMES: NOMES, BATIDAS: BATIDAS, JORNADAS: JORNADAS, LIMITE_SEMANA: LIMITE_SEMANA, LIMITE_DIA: LIMITE_DIA, DOMINGO_LIMITE: DOMINGO_LIMITE, lerHora: lerHora, formatar: formatar, avaliar: avaliar };
 });
